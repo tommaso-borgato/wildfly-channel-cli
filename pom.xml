@@ -100,6 +100,7 @@
 
     <build>
         <plugins>
+            <!-- Pre-configure the exec:java goal for dev purposes -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -108,6 +109,49 @@
                     <mainClass>org.jboss.set.channelreports.Main</mainClass>
                     <commandlineArgs>compare-channels file:base-channel.yaml file:target-channel.yaml</commandlineArgs>
                 </configuration>
+            </plugin>
+
+            <!-- Don't create regular JAR -->
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <phase />
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Standalone JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <archive>
+                        <index>true</index>
+                        <manifest>
+                            <mainClass>org.jboss.set.channelreports.Main</mainClass>
+                        </manifest>
+                    </archive>
+                    <!--<descriptors>
+                        <descriptor>src/assembly/jar.xml</descriptor>
+                    </descriptors>-->
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <appendAssemblyId>true</appendAssemblyId>
+<!--                    <finalName>${artifactName}-${project.version}</finalName>-->
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
