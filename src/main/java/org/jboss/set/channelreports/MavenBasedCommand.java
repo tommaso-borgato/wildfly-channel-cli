@@ -1,6 +1,5 @@
 package org.jboss.set.channelreports;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
@@ -17,14 +16,11 @@ import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelManifest;
 import org.wildfly.channel.ChannelManifestCoordinate;
 import org.wildfly.channel.ChannelManifestMapper;
-import org.wildfly.channel.ChannelSession;
-import org.wildfly.channel.MavenArtifact;
 import org.wildfly.channel.Repository;
 import org.wildfly.channel.Stream;
 import org.wildfly.channel.maven.ChannelCoordinate;
 import org.wildfly.channel.maven.VersionResolverFactory;
 import org.wildfly.channel.spi.MavenVersionsResolver;
-import picocli.CommandLine;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -35,7 +31,6 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -43,73 +38,26 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@CommandLine.Command(name = "compare-channels",
-        description = "Generates report that identifies intersecting streams of two given channels, and highlights streams where their versions differ.")
-public class CompareChannels implements Callable<Integer> {
+abstract class MavenBasedCommand implements Callable<Integer> {
 
-    public static final Path LOCAL_MAVEN_REPO = Paths.get(System.getProperty("user.home"), ".m2", "repository");
+    protected static final Path LOCAL_MAVEN_REPO = Paths.get(System.getProperty("user.home"), ".m2", "repository");
 
-    private static final Logger logger = Logger.getLogger(CompareChannels.class);
+    protected static final Logger logger = Logger.getLogger(CompareChannelsCommand.class);
 
-    @CommandLine.Parameters(index = "0", description = "Base channel (URL of GAV)")
-    private String baseChannelCoordinate;
 
-    @CommandLine.Parameters(index = "1", description = "Channel to compare the base channel with (URL or GAV)")
-    private String targetChannelCoordinate;
+    protected final RepositorySystem system;
+    protected final DefaultRepositorySystemSession systemSession;
 
-    @CommandLine.Option(names = "--channel-repositories", description = "Comma separated repositories URLs where the channels should be looked for",
-            split = ",")
-    private List<String> channelRepositoriesUrls;
-
-    @Override
-    public Integer call() throws Exception {
-        final ChannelCoordinate baseCoordinate = toChannelCoordinate(baseChannelCoordinate);
-        final ChannelCoordinate targetCoordinate = toChannelCoordinate(targetChannelCoordinate);
-        final List<RemoteRepository> channelRepositories = toRepositoryList(channelRepositoriesUrls);
-        final RepositorySystem system = newRepositorySystem();
-        final DefaultRepositorySystemSession systemSession = newRepositorySystemSession(system);
-
-        try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
-            List<Channel> baseChannels = resolverFactory.resolveChannels(List.of(baseCoordinate), channelRepositories);
-            List<Channel> targetChannels = resolverFactory.resolveChannels(List.of(targetCoordinate), channelRepositories);
-
-            ChannelSession baseChannelSession = new ChannelSession(baseChannels, resolverFactory);
-            ChannelSession targetChannelSession = new ChannelSession(targetChannels, resolverFactory);
-
-            Set<Stream> baseStreams = resolveStreams(baseChannels, resolverFactory);
-
-            ArrayList<Pair<MavenArtifact, MavenArtifact>> diff = new ArrayList<>();
-            for (Stream stream : baseStreams) {
-                try {
-                    MavenArtifact baseArtifact = baseChannelSession.resolveMavenArtifact(stream.getGroupId(), stream.getArtifactId(), "pom", null, null);
-                    MavenArtifact targetArtifact = targetChannelSession.resolveMavenArtifact(stream.getGroupId(), stream.getArtifactId(), "pom", null, null);
-                    if (!baseArtifact.getVersion().equals(targetArtifact.getVersion())) {
-                        diff.add(Pair.of(baseArtifact, targetArtifact));
-                        System.out.printf("%s:%s:%s -> %s%n", baseArtifact.getGroupId(), baseArtifact.getArtifactId(),
-                                baseArtifact.getVersion(), targetArtifact.getVersion());
-                    }
-                } catch (RuntimeException e) {
-                    logger.errorf(e, "Failure to compare stream %s", stream);
-                }
-                if (stream.getGroupId().contains("opensaml")) {
-                    break;
-                }
-            }
-
-            List<Repository> targetRepositories = targetChannels.stream()
-                    .flatMap(ch -> ch.getRepositories().stream())
-                    .toList();
-            String reportHtml = new FormattingReportBuilder()
-                    .withRepositories(targetRepositories)
-                    .withUpgrades(diff)
-                    .build();
-            Files.write(Path.of("report.html"), reportHtml.getBytes());
-
-            return CommandLine.ExitCode.OK;
+    public MavenBasedCommand() {
+        try {
+            system = newRepositorySystem();
+            systemSession = newRepositorySystemSession(system);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize command", e);
         }
     }
 
-    private Set<Stream> resolveStreams(List<Channel> channels, VersionResolverFactory resolverFactory) {
+    protected static Set<Stream> resolveStreams(List<Channel> channels, VersionResolverFactory resolverFactory) {
         List<ChannelManifestCoordinate> manifestCoordinates = channels.stream()
                 .map(Channel::getManifestCoordinate).toList();
         List<Repository> repositories = channels.stream()
@@ -122,7 +70,7 @@ public class CompareChannels implements Callable<Integer> {
         }
     }
 
-    private static List<RemoteRepository> toRepositoryList(List<String> urls) {
+    protected static List<RemoteRepository> toRepositoryList(List<String> urls) {
         if (urls == null) {
             return Collections.emptyList();
         }
@@ -131,7 +79,7 @@ public class CompareChannels implements Callable<Integer> {
                 .collect(Collectors.toList());
     }
 
-    private static ChannelCoordinate toChannelCoordinate(String coordinateString) {
+    protected static ChannelCoordinate toChannelCoordinate(String coordinateString) {
         ChannelCoordinate coordinate;
         try {
             coordinate = new ChannelCoordinate(new URL(coordinateString));
@@ -148,7 +96,7 @@ public class CompareChannels implements Callable<Integer> {
         return coordinate;
     }
 
-    private static RepositorySystem newRepositorySystem() {
+    protected static RepositorySystem newRepositorySystem() {
         final DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
         locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
         locator.addService(TransporterFactory.class, HttpTransporterFactory.class);
@@ -162,7 +110,7 @@ public class CompareChannels implements Callable<Integer> {
         return locator.getService(RepositorySystem.class);
     }
 
-    private static DefaultRepositorySystemSession newRepositorySystemSession(RepositorySystem system) throws IOException {
+    protected static DefaultRepositorySystemSession newRepositorySystemSession(RepositorySystem system) throws IOException {
         // TODO: Create empty temporary dir to act as local maven repo - we don't want any artifacts loaded from the
         //  local repo, because the channel would filter those out, leaving us with no artifact available.
         //  There is a PR open that could resolve this issue: https://github.com/wildfly-extras/wildfly-channel/pull/218

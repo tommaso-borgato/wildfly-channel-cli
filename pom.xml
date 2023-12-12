@@ -19,6 +19,8 @@
         <version.maven-resolver>1.9.17</version.maven-resolver>
         <version.jboss-logging>3.5.3.Final</version.jboss-logging>
         <version.j2html>1.6.0</version.j2html>
+        <version.junit>5.10.0</version.junit>
+        <version.assertj>3.24.2</version.assertj>
     </properties>
 
     <dependencies>
@@ -96,6 +98,19 @@
             <artifactId>j2html</artifactId>
             <version>${version.j2html}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${version.assertj}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -134,14 +149,10 @@
                             <mainClass>org.jboss.set.channelreports.Main</mainClass>
                         </manifest>
                     </archive>
-                    <!--<descriptors>
-                        <descriptor>src/assembly/jar.xml</descriptor>
-                    </descriptors>-->
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
                     <appendAssemblyId>true</appendAssemblyId>
-<!--                    <finalName>${artifactName}-${project.version}</finalName>-->
                 </configuration>
                 <executions>
                     <execution>

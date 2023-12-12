@@ -11,8 +11,9 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 import static j2html.TagCreator.caption;
 import static j2html.TagCreator.div;
@@ -20,7 +21,7 @@ import static j2html.TagCreator.each;
 import static j2html.TagCreator.h2;
 import static j2html.TagCreator.li;
 import static j2html.TagCreator.p;
-import static j2html.TagCreator.span;
+import static j2html.TagCreator.rawHtml;
 import static j2html.TagCreator.table;
 import static j2html.TagCreator.tbody;
 import static j2html.TagCreator.td;
@@ -42,35 +43,27 @@ public class FormattingReportBuilder {
             "border-collapse: collapse;";
     private static final String CAPTION_STYLES = "text-align: left;" +
             "font-weight: bold;";
-    private static final String TH_TD_STYLES = "border-bottom: 1px solid #ddd;" +
-            "padding: 5px;" +
+    private static final String PADDING = "padding: 5px;";
+    private static final String BORDER_TOP = "border-top: 1px solid #ddd;";
+    private static final String TH_TD_STYLES = "padding: 5px;" +
             "text-align: left;";
-    private static final String TBODY_TD_STYLES = "border-bottom: 1px solid #ddd;" +
-            "padding: 5px;";
-    private static final String SUBITEM_STYLES = "padding-left: 2em; color: #999;";
+    private static final String TBODY_TD_STYLES = BORDER_TOP + PADDING;
+    private static final String GREY_TEXT = "color: #999;";
+    private static final String SUBITEM_STYLES = "padding-left: 2em;" + GREY_TEXT;
     private static final String GAV_STYLES = "font-family: \"Courier New\";";
     private static final String UL_STYLES = "list-style-type: circle;";
     private static final String LI_STYLES = "margin: 7px 0;";
-    private static final String REPO_LABEL_STYLES = "border-radius: 5px;" +
-            "padding: 3px;";
-    private static final String FOOTER_STYLES = "color: #999;";
-
-    private static final String BG_NEW = "background-color: #fffeec;";
-
-    private static final String BG1 = "background-color: #a8df65;";
-    private static final String BG2 = "background-color: #edf492;";
-    private static final String BG3 = "background-color: #efb960;";
-    private static final String BG4 = "background-color: #ee91bc;";
 
     private List<Repository> repositories;
-    private List<Pair<MavenArtifact, MavenArtifact>> upgrades;
+    private List<Pair<MavenArtifact, List<String>>> upgrades;
+    private HashMap<MavenArtifact, Integer> aggregatedCounter;
 
     public FormattingReportBuilder withRepositories(List<Repository> remoteRepositories) {
         this.repositories = remoteRepositories;
         return this;
     }
 
-    public FormattingReportBuilder withUpgrades(List<Pair<MavenArtifact, MavenArtifact>> upgrades) {
+    public FormattingReportBuilder withUpgrades(List<Pair<MavenArtifact, List<String>>> upgrades) {
         this.upgrades = upgrades;
         return this;
     }
@@ -81,10 +74,28 @@ public class FormattingReportBuilder {
             return null;
         }
 
-        List<Pair<MavenArtifact, MavenArtifact>> sortedUpgrades =
+        List<Pair<MavenArtifact, List<String>>> sortedUpgrades =
                 upgrades.stream().sorted(AlphabeticalComparator.INSTANCE)
-                        .collect(Collectors.toList());
+                        .toList();
 
+        List<Pair<MavenArtifact, List<String>>> aggregatedUpgrades = new ArrayList<>();
+        aggregatedCounter = new HashMap<>();
+        for (Pair<MavenArtifact, List<String>> pair : sortedUpgrades) {
+            MavenArtifact a1 = pair.getLeft();
+            List<String> versions = pair.getRight();
+
+            Optional<Pair<MavenArtifact, List<String>>> found = aggregatedUpgrades.stream()
+                    .filter(p -> p.getLeft().getGroupId().equals(a1.getGroupId())
+                            && p.getLeft().getVersion().equals(a1.getVersion())
+                            && p.getRight().containsAll(versions))
+                    .findAny();
+            if (found.isEmpty()) {
+                aggregatedUpgrades.add(pair);
+            } else {
+                aggregatedCounter.compute(found.get().getLeft(),
+                        (a, i) -> i == null ? 1 : ++i);
+            }
+        }
 
         return div().withStyle(BASIC_STYLES).with(
                 h2("Component Upgrade Report"),
@@ -100,8 +111,8 @@ public class FormattingReportBuilder {
                 table().withStyle(BASIC_STYLES + TABLE_STYLES).with(
                         caption("Possible Component Upgrades").withStyle(CAPTION_STYLES),
                         thead(tr().with(tableHeaders())),
-                        each(sortedUpgrades, this::upgradeData),
-                        tr(td(sortedUpgrades.size() + " items").withStyle(TH_TD_STYLES).attr("colspan", "4"))),
+                        each(aggregatedUpgrades, this::tableData),
+                        tr(td(aggregatedUpgrades.size() + " items").withStyle(TH_TD_STYLES + BORDER_TOP).attr("colspan", "4"))),
                 p("Generated on " + DATE_FORMATTER.format(ZonedDateTime.now()))/*,
                     p().withStyle(FOOTER_STYLES).with(
                             text("Report generated by "),
@@ -124,71 +135,42 @@ public class FormattingReportBuilder {
         return headers.toArray(new DomContent[]{});
     }
 
-    /*private DomContent upgradeData(Pair<MavenArtifact, MavenArtifact> upgrade) {
-        boolean minorPresent = upgrade.getLatestMinor().isPresent();
-        ContainerTag tbody = tbody();
-        tbody.with(tr().with(tableRowData(upgrade.getArtifactRef(), upgrade.getLatestConfigured(), null)));
-        if (minorPresent) {
-            tbody.with(tr().with(tableRowData(upgrade.getArtifactRef(), upgrade.getLatestMinor(), "&#8627; Minor upgrade")));
-        }
-        if (upgrade.getVeryLatest().isPresent()) {
-            tbody.with(tr().with(tableRowData(upgrade.getArtifactRef(), upgrade.getVeryLatest(), "&#8627; Very latest")));
-        }
-        return tbody;
-    }*/
-
-    private DomContent upgradeData(Pair<MavenArtifact, MavenArtifact> upgrade) {
-        ArrayList<DomContent> cells = new ArrayList<>();
-        cells.add(td(upgrade.getLeft().getGroupId()
-                + ":" + upgrade.getLeft().getArtifactId()
-                + ":" + upgrade.getLeft().getVersion())
-                .withStyle(TBODY_TD_STYLES + GAV_STYLES));
-        cells.add(td(upgrade.getRight().getVersion())
-                .withStyle(TBODY_TD_STYLES));
+    private DomContent tableData(Pair<MavenArtifact, List<String>> upgrade) {
         ContainerTag<?> tbody = tbody();
-        tbody.with(tr().with(cells));
+
+        boolean first = true;
+        for (String version : upgrade.getRight()) {
+            ArrayList<DomContent> cells = new ArrayList<>();
+            if (first) {
+                cells.add(td(upgrade.getLeft().getGroupId()
+                        + ":" + upgrade.getLeft().getArtifactId()
+                        + ":" + upgrade.getLeft().getVersion())
+                        .withStyle(TBODY_TD_STYLES + GAV_STYLES));
+                cells.add(td(version).withStyle(TBODY_TD_STYLES));
+            } else {
+                cells.add(td(rawHtml("&#8627;")).withStyle(SUBITEM_STYLES));
+                cells.add(td(version).withStyle(PADDING));
+            }
+            tbody.with(tr().with(cells));
+
+            first = false;
+        }
+
+        Integer counter = aggregatedCounter.get(upgrade.getLeft());
+        if (counter != null && counter > 0) {
+            tbody.with(tr().with(td(counter + " more artifacts from the same groupId")
+                    .withStyle(PADDING + GREY_TEXT)));
+        }
+
         return tbody;
     }
 
-    /*private DomContent tableRowData(ArtifactRef artifactRef, Optional<ComponentUpgrade> upgradeOptional, String caption) {
-        boolean isNew = upgradeOptional.map(u -> u.getFirstSeen() == null && configuration.getLogger().isSet()).orElse(false);
-
-        ArrayList<DomContent> cells = new ArrayList<>();
-        if (caption == null) {
-            cells.add(td(artifactRef.getGroupId()
-                    + ":" + artifactRef.getArtifactId()
-                    + ":" + artifactRef.getVersionString())
-                    .withStyle(TBODY_TD_STYLES + GAV_STYLES + (isNew ? BG_NEW : "")));
-        } else {
-            cells.add(td(rawHtml(caption)).withStyle(TBODY_TD_STYLES + GAV_STYLES + SUBITEM_STYLES + (isNew ? BG_NEW : "")));
-        }
-        if (upgradeOptional.isPresent()) {
-            ComponentUpgrade upgrade = upgradeOptional.get();
-            cells.add(td(upgrade.getNewVersion())
-                    .withStyle(TBODY_TD_STYLES + (isNew ? BG_NEW : "")));
-            cells.add(td(span(upgrade.getRepository())
-                    .withStyle(REPO_LABEL_STYLES + repositoryColor(upgrade.getRepository())))
-                    .withStyle(TBODY_TD_STYLES + (isNew ? BG_NEW : "")));
-            if (configuration.getLogger().isSet()) {
-                cells.add(td(upgrade.getFirstSeen() == null ? "new" : upgrade.getFirstSeen().format(DATE_FORMATTER))
-                        .withStyle(TBODY_TD_STYLES + (isNew ? BG_NEW : "")));
-            }
-        } else {
-            cells.add(td(" ").withStyle(TBODY_TD_STYLES));
-            cells.add(td(" ").withStyle(TBODY_TD_STYLES));
-            if (configuration.getLogger().isSet()) {
-                cells.add(td(" ").withStyle(TBODY_TD_STYLES));
-            }
-        }
-        return tr().with(cells);
-    }*/
-
-    private static class AlphabeticalComparator implements Comparator<Pair<MavenArtifact, MavenArtifact>> {
+    private static class AlphabeticalComparator implements Comparator<Pair<MavenArtifact, List<String>>> {
 
         static final AlphabeticalComparator INSTANCE = new AlphabeticalComparator();
 
         @Override
-        public int compare(Pair<MavenArtifact, MavenArtifact> u1, Pair<MavenArtifact, MavenArtifact> u2) {
+        public int compare(Pair<MavenArtifact, List<String>> u1, Pair<MavenArtifact, List<String>> u2) {
             int diff = u1.getLeft().getGroupId().compareTo(u2.getLeft().getGroupId());
             if (diff == 0) {
                 diff = u1.getLeft().getArtifactId().compareTo(u2.getLeft().getArtifactId());
