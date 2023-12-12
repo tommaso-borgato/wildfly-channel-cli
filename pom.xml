@@ -8,6 +8,21 @@
     <artifactId>wildfly-channel-reports</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <scm>
+        <connection>scm:git:git://github.com/TomasHofman/wildfly-channel-reports.git</connection>
+        <developerConnection>scm:git:git@github.com:TomasHofman/wildfly-channel-reports.git</developerConnection>
+        <url>https://github.com/TomasHofman/wildfly-channel-reports</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>jboss-releases-repository</id>
+            <name>JBoss Releases Repository</name>
+            <url>https://repository.jboss.org/nexus/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -115,6 +130,16 @@
 
     <build>
         <plugins>
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>3.0.1</version>
+                <configuration>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <tagNameFormat>@{project.version}</tagNameFormat>
+                    <arguments>-DskipTests ${release.arguments}</arguments>
+                </configuration>
+            </plugin>
+
             <!-- Pre-configure the exec:java goal for dev purposes -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
