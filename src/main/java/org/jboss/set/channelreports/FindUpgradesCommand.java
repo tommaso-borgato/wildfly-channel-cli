@@ -70,6 +70,11 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             }
         }
 
+        if (upgrades.isEmpty()) {
+            // Don't write the report file if the report is empty.
+            return CommandLine.ExitCode.OK;
+        }
+
         List<Repository> discoveryRepositories = repositories.stream()
                 .map(r -> new Repository(r.getId(), r.getUrl()))
                 .toList();
