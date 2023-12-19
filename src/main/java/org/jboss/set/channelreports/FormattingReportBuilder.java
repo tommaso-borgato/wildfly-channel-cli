@@ -10,9 +10,11 @@ import org.wildfly.channel.Repository;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static j2html.TagCreator.caption;
@@ -22,6 +24,7 @@ import static j2html.TagCreator.h2;
 import static j2html.TagCreator.li;
 import static j2html.TagCreator.p;
 import static j2html.TagCreator.rawHtml;
+import static j2html.TagCreator.span;
 import static j2html.TagCreator.table;
 import static j2html.TagCreator.tbody;
 import static j2html.TagCreator.td;
@@ -47,24 +50,39 @@ public class FormattingReportBuilder {
     private static final String BORDER_TOP = "border-top: 1px solid #ddd;";
     private static final String TH_TD_STYLES = "padding: 5px;" +
             "text-align: left;";
-    private static final String TBODY_TD_STYLES = BORDER_TOP + PADDING;
     private static final String GREY_TEXT = "color: #999;";
     private static final String SUBITEM_STYLES = "padding-left: 2em;" + GREY_TEXT;
     private static final String GAV_STYLES = "font-family: \"Courier New\";";
     private static final String UL_STYLES = "list-style-type: circle;";
     private static final String LI_STYLES = "margin: 7px 0;";
+    private static final String REPO_LABEL_STYLES = "border-radius: 5px;" +
+            "padding: 3px; margin-left: 1em;";
+
+    private static final String BG1 = "background-color: #a8df65;";
+    private static final String BG2 = "background-color: #edf492;";
+    private static final String BG3 = "background-color: #efb960;";
+    private static final String BG4 = "background-color: #ee91bc;";
+    private static final String[] BACKGROUNDS = {BG1, BG2, BG3, BG4};
 
     private List<Repository> repositories;
+    private List<String> repositoryIds = Collections.emptyList();
     private List<Pair<MavenArtifact, List<String>>> upgrades;
     private HashMap<MavenArtifact, Integer> aggregatedCounter;
+    private Map<MavenArtifact, Map<String, String>> artifactsToRepositoryMap = Collections.emptyMap();
 
     public FormattingReportBuilder withRepositories(List<Repository> remoteRepositories) {
         this.repositories = remoteRepositories;
+        this.repositoryIds = remoteRepositories.stream().map(Repository::getId).toList();
         return this;
     }
 
     public FormattingReportBuilder withUpgrades(List<Pair<MavenArtifact, List<String>>> upgrades) {
         this.upgrades = upgrades;
+        return this;
+    }
+
+    public FormattingReportBuilder withArtifactToRepositoryMap(Map<MavenArtifact, Map<String, String>> artifactsToRepositoryMap) {
+        this.artifactsToRepositoryMap = artifactsToRepositoryMap;
         return this;
     }
 
@@ -103,8 +121,8 @@ public class FormattingReportBuilder {
                 ul().withStyle(UL_STYLES).with(
                         each(repositories,
                                 entry -> li().withStyle(LI_STYLES).with(
-//                                            span(entry.getKey())
-//                                                    .withStyle(REPO_LABEL_STYLES + repositoryColor(entry.getKey())),
+                                        span(entry.getId())
+                                                .withStyle(REPO_LABEL_STYLES + repositoryColor(entry.getId())),
                                         text(" " + entry.getUrl())
                                 ))
                 ),
@@ -136,30 +154,39 @@ public class FormattingReportBuilder {
     }
 
     private DomContent tableData(Pair<MavenArtifact, List<String>> upgrade) {
-        ContainerTag<?> tbody = tbody();
+        final MavenArtifact artifact = upgrade.getLeft();
+        final ContainerTag<?> tbody = tbody();
 
         boolean first = true;
         for (String version : upgrade.getRight()) {
+            final String repoId = artifactsToRepositoryMap.getOrDefault(artifact, Collections.emptyMap()).get(version);
+
             ArrayList<DomContent> cells = new ArrayList<>();
             if (first) {
-                cells.add(td(upgrade.getLeft().getGroupId()
-                        + ":" + upgrade.getLeft().getArtifactId()
-                        + ":" + upgrade.getLeft().getVersion())
-                        .withStyle(TBODY_TD_STYLES + GAV_STYLES));
-                cells.add(td(version).withStyle(TBODY_TD_STYLES));
+                cells.add(td(artifact.getGroupId()
+                        + ":" + artifact.getArtifactId()
+                        + ":" + artifact.getVersion())
+                        .withStyle(PADDING + GAV_STYLES));
+                cells.add(td().with(
+                        text(version),
+                        repoId != null ? span(repoId).withStyle(REPO_LABEL_STYLES + repositoryColor(repoId)) : span()
+                ).withStyle(PADDING));
             } else {
                 cells.add(td(rawHtml("&#8627;")).withStyle(SUBITEM_STYLES));
-                cells.add(td(version).withStyle(PADDING));
+                cells.add(td().with(
+                        text(version),
+                        repoId != null ? span(repoId).withStyle(REPO_LABEL_STYLES + repositoryColor(repoId)) : span()
+                ).withStyle(PADDING));
             }
-            tbody.with(tr().with(cells));
+            tbody.with(tr().with(cells).withStyle(BORDER_TOP));
 
             first = false;
         }
 
-        Integer counter = aggregatedCounter.get(upgrade.getLeft());
+        Integer counter = aggregatedCounter.get(artifact);
         if (counter != null && counter > 0) {
             tbody.with(tr().with(td(counter + " more artifacts from the same groupId")
-                    .withStyle(PADDING + GREY_TEXT)));
+                    .withStyle(SUBITEM_STYLES)));
         }
 
         return tbody;
@@ -181,4 +208,10 @@ public class FormattingReportBuilder {
             return diff;
         }
     }
+
+    private String repositoryColor(String key) {
+        int idx = repositoryIds.indexOf(key);
+        return BACKGROUNDS[idx % BACKGROUNDS.length];
+    }
+
 }

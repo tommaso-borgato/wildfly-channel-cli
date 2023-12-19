@@ -4,6 +4,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.aether.RepositoryException;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.repository.ArtifactRepository;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResult;
@@ -23,7 +24,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @CommandLine.Command(name = "find-upgrades",
@@ -34,7 +37,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     @CommandLine.Parameters(index = "0", description = "Base channel (URL of GAV)")
     private String channelCoordinateString;
 
-    @CommandLine.Option(names = "--channel-repositories", description = "Comma separated repositories URLs where the channels should be looked for",
+    @CommandLine.Option(names = "--channel-repositories", description = "Comma separated repositories URLs where the channels should be looked for, if a channel GAV is given",
             split = ",")
     private List<String> channelRepositoriesUrls;
 
@@ -48,7 +51,8 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         final List<RemoteRepository> channelRepositories = toRepositoryList(channelRepositoriesUrls);
         final List<RemoteRepository> repositories = toRepositoryList(repositoryUrls);
 
-        ArrayList<Pair<MavenArtifact, List<String>>> upgrades = new ArrayList<>();
+        final ArrayList<Pair<MavenArtifact, List<String>>> upgrades = new ArrayList<>();
+        final Map<MavenArtifact, Map<String, String>> artifactsToRepositories = new HashMap<>();
         try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
             List<Channel> channels = resolverFactory.resolveChannels(List.of(channelCoordinate), channelRepositories);
             ChannelSession channelSession = new ChannelSession(channels, resolverFactory);
@@ -57,9 +61,21 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             for (Stream stream : channelStreams) {
                 MavenArtifact resolvedArtifact = channelSession.resolveMavenArtifact(stream.getGroupId(), stream.getArtifactId(), "pom", null, null);
                 VersionRangeResult versionRangeResult = resolveVersionRange(resolvedArtifact, repositories);
-                List<String> availableVersions = versionRangeResult.getVersions().stream()
-                        .sorted(Comparator.reverseOrder()).map(Version::toString).toList();
+                List<Version> availableVersions = versionRangeResult.getVersions().stream()
+                        .sorted(Comparator.reverseOrder()).toList();
                 List<String> possibleUpgrades = findPossibleUpgrades(availableVersions);
+
+                for (Version version: availableVersions) {
+                    ArtifactRepository repository = versionRangeResult.getRepository(version);
+                    artifactsToRepositories.compute(resolvedArtifact, (a, current) -> {
+                       if (current == null) {
+                           current = new HashMap<>();
+                       }
+                       current.put(version.toString(), repository.getId());
+                       return current;
+                    });
+                }
+
                 if (!possibleUpgrades.isEmpty()) {
                     //noinspection UnnecessaryLocalVariable
                     MavenArtifact a = resolvedArtifact;
@@ -81,6 +97,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         String reportHtml = new FormattingReportBuilder()
                 .withRepositories(discoveryRepositories)
                 .withUpgrades(upgrades)
+                .withArtifactToRepositoryMap(artifactsToRepositories)
                 .build();
         Files.write(Path.of("report.html"), reportHtml.getBytes());
 
@@ -109,21 +126,21 @@ public class FindUpgradesCommand extends MavenBasedCommand {
      * @param versions List of available versions, has to be sorted from highest to lowest
      * @return A subset of the list passed in `versions` argument, containing only highest versions of each stream.
      */
-    static List<String> findPossibleUpgrades(List<String> versions) {
+    static List<String> findPossibleUpgrades(List<? extends Version> versions) {
         if (versions.isEmpty()) {
             return Collections.emptyList();
         }
         ArrayList<String> resultVersions = new ArrayList<>();
 
         // Always add the first (highest) version from given list.
-        resultVersions.add(versions.get(0));
-        String[] lastSegments = parseVersion(versions.get(0));
+        resultVersions.add(versions.get(0).toString());
+        String[] lastSegments = parseVersion(versions.get(0).toString());
         String[] lastNumericalSegments = numericalSegments(lastSegments);
         String lastQualifier = qualifier(lastSegments);
         int lastIndex = lastNumericalSegments.length - 1;
 
-        for (String version: versions) {
-            String[] segments = parseVersion(version);
+        for (Version version: versions) {
+            String[] segments = parseVersion(version.toString());
             String[] numericalSegments = numericalSegments(segments);
             String qualifier = qualifier(segments);
 
@@ -140,7 +157,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             }
 
             if (differs) {
-                resultVersions.add(version);
+                resultVersions.add(version.toString());
                 lastSegments = segments;
                 lastNumericalSegments = numericalSegments;
                 lastQualifier = qualifier;
