@@ -34,15 +34,15 @@ import java.util.Set;
                 "given Maven repositories.")
 public class FindUpgradesCommand extends MavenBasedCommand {
 
-    @CommandLine.Parameters(index = "0", description = "Base channel (URL of GAV)")
+    @CommandLine.Parameters(index = "0", description = "Base channel (URL of GAV).")
     private String channelCoordinateString;
 
-    @CommandLine.Option(names = "--channel-repositories", description = "Comma separated repositories URLs where the channels should be looked for, if a channel GAV is given",
-            split = ",")
+    @CommandLine.Option(names = "--channel-repositories", split = ",",
+            description = "Comma separated repositories URLs where the channels should be looked for, if a channel GAV is given.")
     private List<String> channelRepositoriesUrls;
 
-    @CommandLine.Option(names = "--repositories", description = "Comma separated repositories URLs where component upgrades should be looked for",
-            split = ",")
+    @CommandLine.Option(names = "--repositories", split = ",",
+            description = "Comma separated repositories URLs where component upgrades should be looked for. Format is either `URL1,URL2,...` or `ID1::URL1,ID2::URL2,...`")
     private List<String> repositoryUrls;
 
     @Override

@@ -75,7 +75,17 @@ abstract class MavenBasedCommand implements Callable<Integer> {
             return Collections.emptyList();
         }
         return IntStream.range(0, urls.size())
-                .mapToObj(i -> new RemoteRepository.Builder("repo-" + i, "default", urls.get(i)).build())
+                .mapToObj(i -> {
+                    String item = urls.get(i);
+                    String[] split = item.split("::");
+                    if (split.length == 1) {
+                        return new RemoteRepository.Builder("repo-" + i, "default", item).build();
+                    } else if (split.length == 2){
+                        return new RemoteRepository.Builder(split[0], "default", split[1]).build();
+                    } else {
+                        throw new IllegalArgumentException("Invalid repository format, expected is 'repo-id::repo-url': " + item);
+                    }
+                })
                 .collect(Collectors.toList());
     }
 
