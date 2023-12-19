@@ -42,10 +42,11 @@ public class FormattingReportBuilder {
 
     private static final String BASIC_STYLES = "font-family: Verdana,sans-serif;" +
             "font-size: 10pt;";
+    private static final String BOLD_FONT = "font-weight: bold;";
     private static final String TABLE_STYLES = "margin: 2em 0;" +
             "border-collapse: collapse;";
     private static final String CAPTION_STYLES = "text-align: left;" +
-            "font-weight: bold;";
+            BOLD_FONT;
     private static final String PADDING = "padding: 5px;";
     private static final String BORDER_TOP = "border-top: 1px solid #ddd;";
     private static final String TH_TD_STYLES = "padding: 5px;" +
@@ -168,13 +169,13 @@ public class FormattingReportBuilder {
                         + ":" + artifact.getVersion())
                         .withStyle(PADDING + GAV_STYLES));
                 cells.add(td().with(
-                        text(version),
+                        span(version).withStyle(isTheSameMinor(artifact.getVersion(), version) ? BOLD_FONT : ""),
                         repoId != null ? span(repoId).withStyle(REPO_LABEL_STYLES + repositoryColor(repoId)) : span()
                 ).withStyle(PADDING));
             } else {
                 cells.add(td(rawHtml("&#8627;")).withStyle(SUBITEM_STYLES));
                 cells.add(td().with(
-                        text(version),
+                        span(version).withStyle(isTheSameMinor(artifact.getVersion(), version) ? BOLD_FONT : ""),
                         repoId != null ? span(repoId).withStyle(REPO_LABEL_STYLES + repositoryColor(repoId)) : span()
                 ).withStyle(PADDING));
             }
@@ -212,6 +213,17 @@ public class FormattingReportBuilder {
     private String repositoryColor(String key) {
         int idx = repositoryIds.indexOf(key);
         return BACKGROUNDS[idx % BACKGROUNDS.length];
+    }
+
+    static boolean isTheSameMinor(String v1, String v2) {
+        String[] s1 = v1.split("[-._]");
+        String[] s2 = v2.split("[-._]");
+        for (int i = 0; i < 2; i++) {
+            if (i >= s1.length || i >= s2.length || !s1[i].equals(s2[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }
