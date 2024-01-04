@@ -10,6 +10,8 @@ import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResult;
 import org.eclipse.aether.version.Version;
 import org.wildfly.channel.Channel;
+import org.wildfly.channel.ChannelManifest;
+import org.wildfly.channel.ChannelManifestMapper;
 import org.wildfly.channel.ChannelSession;
 import org.wildfly.channel.MavenArtifact;
 import org.wildfly.channel.Repository;
@@ -18,21 +20,30 @@ import org.wildfly.channel.maven.ChannelCoordinate;
 import org.wildfly.channel.maven.VersionResolverFactory;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @CommandLine.Command(name = "find-upgrades",
         description = "Generates report showing possible upgrades for streams in given channel by directly querying " +
-                "given Maven repositories.")
+                "given Maven repositories. This also generates two manifest files, " +
+                "diff-manifest.yaml and upgraded-manifest.yaml, containing upgraded streams and all streams with " +
+                "upgraded versions respectively.")
 public class FindUpgradesCommand extends MavenBasedCommand {
+
+    private final Path REPORT_FILE = Path.of("report.html");
+    private final Path DIFF_MANIFEST_FILE = Path.of("diff-manifest.yaml");
+    private final Path UPGRADED_MANIFEST_FILE = Path.of("upgraded-manifest.yaml");
 
     @CommandLine.Parameters(index = "0", description = "Base channel (URL of GAV).")
     private String channelCoordinateString;
@@ -45,43 +56,57 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             description = "Comma separated repositories URLs where component upgrades should be looked for. Format is either `URL1,URL2,...` or `ID1::URL1,ID2::URL2,...`")
     private List<String> repositoryUrls;
 
+    private final ArrayList<Pair<MavenArtifact, List<String>>> upgrades = new ArrayList<>();
+    private final Set<Stream> diffStreams = new HashSet<>();
+    private final Set<Stream> upgradedStreams = new HashSet<>();
+    private final List<UpgradeDiscoveryListener> discoveryListeners = new ArrayList<>();
+    private final Map<MavenArtifact, Map<String, String>> artifactsToRepositories = new HashMap<>();
+    private final List<RemoteRepository> repositories = new ArrayList<>();
+
+    public FindUpgradesCommand() {
+        discoveryListeners.add(new UpgradeCollectingListener());
+        discoveryListeners.add(new StreamCollectingListener());
+    }
+
     @Override
     public Integer call() throws Exception {
         final ChannelCoordinate channelCoordinate = toChannelCoordinate(channelCoordinateString);
         final List<RemoteRepository> channelRepositories = toRepositoryList(channelRepositoriesUrls);
-        final List<RemoteRepository> repositories = toRepositoryList(repositoryUrls);
+        repositories.addAll(toRepositoryList(repositoryUrls));
 
-        final ArrayList<Pair<MavenArtifact, List<String>>> upgrades = new ArrayList<>();
-        final Map<MavenArtifact, Map<String, String>> artifactsToRepositories = new HashMap<>();
         try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
             List<Channel> channels = resolverFactory.resolveChannels(List.of(channelCoordinate), channelRepositories);
             ChannelSession channelSession = new ChannelSession(channels, resolverFactory);
             Set<Stream> channelStreams = resolveStreams(channels, resolverFactory);
+            upgradedStreams.addAll(channelStreams);
 
             for (Stream stream : channelStreams) {
                 MavenArtifact resolvedArtifact = channelSession.resolveMavenArtifact(stream.getGroupId(), stream.getArtifactId(), "pom", null, null);
-                VersionRangeResult versionRangeResult = resolveVersionRange(resolvedArtifact, repositories);
+                VersionRangeResult versionRangeResult = resolveVersionRange(resolvedArtifact);
                 List<Version> availableVersions = versionRangeResult.getVersions().stream()
                         .sorted(Comparator.reverseOrder()).toList();
                 List<String> possibleUpgrades = findPossibleUpgrades(availableVersions);
 
-                for (Version version: availableVersions) {
+                for (Version version : availableVersions) {
                     ArtifactRepository repository = versionRangeResult.getRepository(version);
                     artifactsToRepositories.compute(resolvedArtifact, (a, current) -> {
-                       if (current == null) {
-                           current = new HashMap<>();
-                       }
-                       current.put(version.toString(), repository.getId());
-                       return current;
+                        if (current == null) {
+                            current = new HashMap<>();
+                        }
+                        current.put(version.toString(), repository.getId());
+                        return current;
                     });
                 }
 
                 if (!possibleUpgrades.isEmpty()) {
                     //noinspection UnnecessaryLocalVariable
                     MavenArtifact a = resolvedArtifact;
-                    System.out.printf("%s:%s:%s -> %s%n", a.getGroupId(), a.getArtifactId(), a.getVersion(),
+                    logger.infof("Found upgrades: %s:%s:%s -> %s", a.getGroupId(), a.getArtifactId(), a.getVersion(),
                             String.join(", ", possibleUpgrades));
-                    upgrades.add(Pair.of(resolvedArtifact, possibleUpgrades));
+
+                    for (UpgradeDiscoveryListener listener: discoveryListeners) {
+                        listener.upgrade(resolvedArtifact, possibleUpgrades);
+                    }
                 }
             }
         }
@@ -91,20 +116,17 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             return CommandLine.ExitCode.OK;
         }
 
-        List<Repository> discoveryRepositories = repositories.stream()
-                .map(r -> new Repository(r.getId(), r.getUrl()))
-                .toList();
-        String reportHtml = new FormattingReportBuilder()
-                .withRepositories(discoveryRepositories)
-                .withUpgrades(upgrades)
-                .withArtifactToRepositoryMap(artifactsToRepositories)
-                .build();
-        Files.write(Path.of("report.html"), reportHtml.getBytes());
+        writeReportFile();
+
+        // Write manifest file that contains only upgraded components
+        writeManifestFile(DIFF_MANIFEST_FILE, diffStreams);
+        // Write manifest file that contains both original and upgraded components
+        writeManifestFile(UPGRADED_MANIFEST_FILE, upgradedStreams);
 
         return CommandLine.ExitCode.OK;
     }
 
-    private VersionRangeResult resolveVersionRange(MavenArtifact artifact, List<RemoteRepository> repositories) throws RepositoryException {
+    private VersionRangeResult resolveVersionRange(MavenArtifact artifact) throws RepositoryException {
         VersionRangeRequest rangeRequest = new VersionRangeRequest();
         // Set version range from current version excluded:
         Artifact requestArtifact = new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
@@ -121,8 +143,29 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         return rangeResult;
     }
 
+    private void writeReportFile() throws IOException {
+        List<Repository> discoveryRepositories = repositories.stream()
+                .map(r -> new Repository(r.getId(), r.getUrl()))
+                .toList();
+        String reportHtml = new FormattingReportBuilder()
+                .withRepositories(discoveryRepositories)
+                .withUpgrades(upgrades)
+                .withArtifactToRepositoryMap(artifactsToRepositories)
+                .build();
+
+        logger.infof("Writing report file into %s", REPORT_FILE.toString());
+        Files.write(REPORT_FILE, reportHtml.getBytes());
+    }
+
+    private void writeManifestFile(Path file, Collection<Stream> streams) throws IOException {
+        ChannelManifest manifest = new ChannelManifest(null, null, null, streams);
+        String manifestString = ChannelManifestMapper.toYaml(manifest);
+        Files.write(file, manifestString.getBytes());
+    }
+
     /**
      * This returns highest version of each stream from given list of versions.
+     *
      * @param versions List of available versions, has to be sorted from highest to lowest
      * @return A subset of the list passed in `versions` argument, containing only highest versions of each stream.
      */
@@ -133,16 +176,17 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         ArrayList<String> resultVersions = new ArrayList<>();
 
         // Always add the first (highest) version from given list.
-        resultVersions.add(versions.get(0).toString());
-        String[] lastSegments = parseVersion(versions.get(0).toString());
-        String[] lastNumericalSegments = numericalSegments(lastSegments);
-        String lastQualifier = qualifier(lastSegments);
+        String highestVersion = versions.get(0).toString();
+        resultVersions.add(highestVersion);
+        String[] lastSegments = VersionUtils.parseVersion(highestVersion);
+        String[] lastNumericalSegments = VersionUtils.numericalSegments(lastSegments);
+        String lastQualifier = VersionUtils.firstQualifierSegment(lastSegments);
         int lastIndex = lastNumericalSegments.length - 1;
 
-        for (Version version: versions) {
-            String[] segments = parseVersion(version.toString());
-            String[] numericalSegments = numericalSegments(segments);
-            String qualifier = qualifier(segments);
+        for (Version version : versions) {
+            String[] segments = VersionUtils.parseVersion(version.toString());
+            String[] numericalSegments = VersionUtils.numericalSegments(segments);
+            String qualifier = VersionUtils.firstQualifierSegment(segments);
 
             boolean differs = false;
             for (int i = 0; i < lastIndex; i++) {
@@ -169,29 +213,36 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         return resultVersions;
     }
 
-    private static String[] parseVersion(String version) {
-        return version.split("[-._]");
+    private interface UpgradeDiscoveryListener {
+        void upgrade(MavenArtifact artifact, List<String> possibleUpgrades);
     }
 
-    private static String[] numericalSegments(String[] segments) {
-        for (int i = 0; i < segments.length; i++) {
-            try {
-                Integer.valueOf(segments[i]);
-            } catch (NumberFormatException e) {
-                return Arrays.copyOf(segments, i);
-            }
+    private class UpgradeCollectingListener implements UpgradeDiscoveryListener {
+        @Override
+        public void upgrade(MavenArtifact artifact, List<String> possibleUpgrades) {
+            upgrades.add(Pair.of(artifact, possibleUpgrades));
         }
-        return segments;
     }
 
-    private static String qualifier(String[] segments) {
-        for (String segment : segments) {
-            try {
-                Integer.valueOf(segment);
-            } catch (NumberFormatException e) {
-                return segment;
+    private class StreamCollectingListener implements UpgradeDiscoveryListener {
+        @Override
+        public void upgrade(MavenArtifact artifact, List<String> possibleUpgrades) {
+            Optional<String> latestMicro = VersionUtils.findMicroUpgrade(artifact.getVersion(), possibleUpgrades);
+            if (latestMicro.isPresent()) {
+                // Add to the collection containing only upgraded streams
+                diffStreams.add(new Stream(artifact.getGroupId(), artifact.getArtifactId(), latestMicro.get()));
+
+                // Update the stream in the collection containing all streams
+                Optional<Stream> originalStream = upgradedStreams.stream()
+                        .filter(s -> s.getGroupId().equals(artifact.getGroupId())
+                                && s.getArtifactId().equals(artifact.getArtifactId()))
+                        .findAny();
+                if (originalStream.isPresent()) {
+                    upgradedStreams.remove(originalStream.get());
+                    upgradedStreams.add(new Stream(artifact.getGroupId(), artifact.getArtifactId(), latestMicro.get()));
+                }
             }
         }
-        return "";
     }
+
 }

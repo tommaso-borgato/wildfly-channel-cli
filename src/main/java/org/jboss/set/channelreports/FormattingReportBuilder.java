@@ -33,6 +33,7 @@ import static j2html.TagCreator.th;
 import static j2html.TagCreator.thead;
 import static j2html.TagCreator.tr;
 import static j2html.TagCreator.ul;
+import static org.jboss.set.channelreports.VersionUtils.isTheSameMinor;
 
 public class FormattingReportBuilder {
 
@@ -213,17 +214,6 @@ public class FormattingReportBuilder {
     private String repositoryColor(String key) {
         int idx = repositoryIds.indexOf(key);
         return BACKGROUNDS[idx % BACKGROUNDS.length];
-    }
-
-    static boolean isTheSameMinor(String v1, String v2) {
-        String[] s1 = v1.split("[-._]");
-        String[] s2 = v2.split("[-._]");
-        for (int i = 0; i < 2; i++) {
-            if (i >= s1.length || i >= s2.length || !s1[i].equals(s2[i])) {
-                return false;
-            }
-        }
-        return true;
     }
 
 }
