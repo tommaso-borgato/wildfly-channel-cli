@@ -1,5 +1,6 @@
 package org.jboss.set.channelreports;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
@@ -12,6 +13,7 @@ import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.transport.file.FileTransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.jboss.logging.Logger;
+import org.wildfly.channel.BlocklistCoordinate;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelManifest;
 import org.wildfly.channel.ChannelManifestCoordinate;
@@ -89,7 +91,16 @@ abstract class MavenBasedCommand implements Callable<Integer> {
                 .collect(Collectors.toList());
     }
 
+    protected static List<Repository> toChannelRepositories(List<RemoteRepository> repositories) {
+        return repositories.stream()
+                .map(r -> new Repository(r.getId(), r.getUrl()))
+                .toList();
+    }
+
     protected static ChannelCoordinate toChannelCoordinate(String coordinateString) {
+        if (StringUtils.isBlank(coordinateString)) {
+            return null;
+        }
         ChannelCoordinate coordinate;
         try {
             coordinate = new ChannelCoordinate(new URL(coordinateString));
@@ -99,6 +110,26 @@ abstract class MavenBasedCommand implements Callable<Integer> {
                 coordinate = new ChannelCoordinate(segments[0], segments[1]);
             } else if (segments.length == 3) {
                 coordinate = new ChannelCoordinate(segments[0], segments[1], segments[2]);
+            } else {
+                throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
+            }
+        }
+        return coordinate;
+    }
+
+    protected static BlocklistCoordinate toBlocklistCoordinate(String coordinateString) {
+        if (StringUtils.isBlank(coordinateString)) {
+            return null;
+        }
+        BlocklistCoordinate coordinate;
+        try {
+            coordinate = new BlocklistCoordinate(new URL(coordinateString));
+        } catch (MalformedURLException e) {
+            String[] segments = coordinateString.split(":");
+            if (segments.length == 2) {
+                coordinate = new BlocklistCoordinate(segments[0], segments[1]);
+            } else if (segments.length == 3) {
+                coordinate = new BlocklistCoordinate(segments[0], segments[1], segments[2]);
             } else {
                 throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
             }

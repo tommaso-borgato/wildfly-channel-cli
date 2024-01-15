@@ -9,6 +9,8 @@ import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResult;
 import org.eclipse.aether.version.Version;
+import org.wildfly.channel.Blocklist;
+import org.wildfly.channel.BlocklistCoordinate;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelManifest;
 import org.wildfly.channel.ChannelManifestMapper;
@@ -18,9 +20,11 @@ import org.wildfly.channel.Repository;
 import org.wildfly.channel.Stream;
 import org.wildfly.channel.maven.ChannelCoordinate;
 import org.wildfly.channel.maven.VersionResolverFactory;
+import org.wildfly.channel.spi.MavenVersionsResolver;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -46,7 +50,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     private final Path DIFF_MANIFEST_FILE = Path.of("diff-manifest.yaml");
     private final Path UPGRADED_MANIFEST_FILE = Path.of("upgraded-manifest.yaml");
 
-    @CommandLine.Parameters(index = "0", description = "Base channel (URL of GAV).")
+    @CommandLine.Parameters(index = "0", description = "Base channel coordinate (URL of GAV).")
     private String channelCoordinateString;
 
     @CommandLine.Option(names = "--channel-repositories", split = ",",
@@ -65,12 +69,18 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             description = "Regexp to exclude versions from being added to the report.")
     private String versionsExclude;
 
+    @CommandLine.Option(names = "--blocklist-coordinate",
+            description = "Blocklist coordinate (URL or Maven GAV)")
+    private String blocklistCoordinateString;
+
     private final ArrayList<Pair<MavenArtifact, List<String>>> upgrades = new ArrayList<>();
     private final Set<Stream> diffStreams = new HashSet<>();
     private final Set<Stream> upgradedStreams = new HashSet<>();
     private final List<UpgradeDiscoveryListener> discoveryListeners = new ArrayList<>();
     private final Map<MavenArtifact, Map<String, String>> artifactsToRepositories = new HashMap<>();
     private final List<RemoteRepository> repositories = new ArrayList<>();
+    private final List<RemoteRepository> channelRepositories = new ArrayList<>();
+    private Blocklist blocklist = null;
 
     public FindUpgradesCommand() {
         discoveryListeners.add(new UpgradeCollectingListener());
@@ -80,7 +90,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     @Override
     public Integer call() throws Exception {
         final ChannelCoordinate channelCoordinate = toChannelCoordinate(channelCoordinateString);
-        final List<RemoteRepository> channelRepositories = toRepositoryList(channelRepositoriesUrls);
+        channelRepositories.addAll(toRepositoryList(channelRepositoriesUrls));
         repositories.addAll(toRepositoryList(repositoryUrls));
 
         Pattern inclusionPattern = null;
@@ -93,6 +103,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         }
 
         try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
+            loadBlocklist(resolverFactory);
             List<Channel> channels = resolverFactory.resolveChannels(List.of(channelCoordinate), channelRepositories);
             ChannelSession channelSession = new ChannelSession(channels, resolverFactory);
             Set<Stream> channelStreams = resolveStreams(channels, resolverFactory);
@@ -103,7 +114,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
                 VersionRangeResult versionRangeResult = resolveVersionRange(resolvedArtifact);
                 List<Version> availableVersions = versionRangeResult.getVersions().stream()
                         .sorted(Comparator.reverseOrder()).toList();
-                List<String> possibleUpgrades = findPossibleUpgrades(availableVersions, inclusionPattern, exclusionPattern);
+                List<String> possibleUpgrades = findPossibleUpgrades(stream, availableVersions, inclusionPattern, exclusionPattern, blocklist);
 
                 for (Version version : availableVersions) {
                     ArtifactRepository repository = versionRangeResult.getRepository(version);
@@ -162,9 +173,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     }
 
     private void writeReportFile() throws IOException {
-        List<Repository> discoveryRepositories = repositories.stream()
-                .map(r -> new Repository(r.getId(), r.getUrl()))
-                .toList();
+        List<Repository> discoveryRepositories = toChannelRepositories(repositories);
         String reportHtml = new FormattingReportBuilder()
                 .withRepositories(discoveryRepositories)
                 .withUpgrades(upgrades)
@@ -181,17 +190,35 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         Files.write(file, manifestString.getBytes());
     }
 
+    private void loadBlocklist(VersionResolverFactory resolverFactory) {
+        final BlocklistCoordinate blocklistCoordinate = toBlocklistCoordinate(blocklistCoordinateString);
+        if (blocklistCoordinate != null) {
+            try (MavenVersionsResolver resolver = resolverFactory.create(toChannelRepositories(channelRepositories))) {
+                List<URL> urls = resolver.resolveChannelMetadata(List.of(blocklistCoordinate));
+                if (urls.size() > 0) {
+                    blocklist = Blocklist.from(urls.get(0));
+                }
+            }
+        }
+    }
+
     /**
      * This returns highest version of each stream from given list of versions.
      *
      * @param versions List of available versions, has to be sorted from highest to lowest
      * @return A subset of the list passed in `versions` argument, containing only highest versions of each stream.
      */
-    static List<String> findPossibleUpgrades(List<? extends Version> versions, Pattern include, Pattern exclude) {
-        // Apply inclusions and exclusions, only work with the resulting subset
+    static List<String> findPossibleUpgrades(Stream stream, List<? extends Version> versions, Pattern include, Pattern exclude, Blocklist blocklist) {
+        final Set<String> blockedVersions = new HashSet<>();
+        if (blocklist != null) {
+            blockedVersions.addAll(blocklist.getVersionsFor(stream.getGroupId(), stream.getArtifactId()));
+        }
+
+        // Apply inclusions, exclusions and blocklist, only work with the resulting subset
         versions = versions.stream()
                 .filter(v -> include == null || include.matcher(v.toString()).find())
                 .filter(v -> exclude == null || !exclude.matcher(v.toString()).find())
+                .filter(v -> blocklist == null || !blockedVersions.contains(v.toString()))
                 .toList();
 
         if (versions.isEmpty()) {
