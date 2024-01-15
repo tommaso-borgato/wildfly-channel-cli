@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @CommandLine.Command(name = "find-upgrades",
         description = "Generates report showing possible upgrades for streams in given channel by directly querying " +
@@ -56,6 +57,14 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             description = "Comma separated repositories URLs where component upgrades should be looked for. Format is either `URL1,URL2,...` or `ID1::URL1,ID2::URL2,...`")
     private List<String> repositoryUrls;
 
+    @CommandLine.Option(names = "--include-pattern",
+            description = "Regexp that versions need to match in order to be added to the report.")
+    private String versionsInclude;
+
+    @CommandLine.Option(names = "--exclude-pattern",
+            description = "Regexp to exclude versions from being added to the report.")
+    private String versionsExclude;
+
     private final ArrayList<Pair<MavenArtifact, List<String>>> upgrades = new ArrayList<>();
     private final Set<Stream> diffStreams = new HashSet<>();
     private final Set<Stream> upgradedStreams = new HashSet<>();
@@ -74,6 +83,15 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         final List<RemoteRepository> channelRepositories = toRepositoryList(channelRepositoriesUrls);
         repositories.addAll(toRepositoryList(repositoryUrls));
 
+        Pattern inclusionPattern = null;
+        Pattern exclusionPattern = null;
+        if (versionsInclude != null) {
+            inclusionPattern = Pattern.compile(versionsInclude);
+        }
+        if (versionsExclude != null) {
+            exclusionPattern = Pattern.compile(versionsExclude);
+        }
+
         try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
             List<Channel> channels = resolverFactory.resolveChannels(List.of(channelCoordinate), channelRepositories);
             ChannelSession channelSession = new ChannelSession(channels, resolverFactory);
@@ -85,7 +103,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
                 VersionRangeResult versionRangeResult = resolveVersionRange(resolvedArtifact);
                 List<Version> availableVersions = versionRangeResult.getVersions().stream()
                         .sorted(Comparator.reverseOrder()).toList();
-                List<String> possibleUpgrades = findPossibleUpgrades(availableVersions);
+                List<String> possibleUpgrades = findPossibleUpgrades(availableVersions, inclusionPattern, exclusionPattern);
 
                 for (Version version : availableVersions) {
                     ArtifactRepository repository = versionRangeResult.getRepository(version);
@@ -169,7 +187,13 @@ public class FindUpgradesCommand extends MavenBasedCommand {
      * @param versions List of available versions, has to be sorted from highest to lowest
      * @return A subset of the list passed in `versions` argument, containing only highest versions of each stream.
      */
-    static List<String> findPossibleUpgrades(List<? extends Version> versions) {
+    static List<String> findPossibleUpgrades(List<? extends Version> versions, Pattern include, Pattern exclude) {
+        // Apply inclusions and exclusions, only work with the resulting subset
+        versions = versions.stream()
+                .filter(v -> include == null || include.matcher(v.toString()).find())
+                .filter(v -> exclude == null || !exclude.matcher(v.toString()).find())
+                .toList();
+
         if (versions.isEmpty()) {
             return Collections.emptyList();
         }
