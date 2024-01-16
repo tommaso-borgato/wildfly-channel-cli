@@ -7,7 +7,7 @@ Comparison and report generation tool for [Wildfly Channels](https://github.com/
 For general usage information, run:
 
 ```shell
-java -jar path/to/wildfly-channel-reports-*.jar --help
+java -jar path/to/wildfly-channel-reports-*-jar-with-dependencies.jar --help
 ```
 
 ### `find-upgrades` command
@@ -16,7 +16,7 @@ This command compares a Wildfly Channel against given Maven repositories. I.e. i
 could be upgraded to a newer version. 
 
 ```shell
-java -jar path/to/wildfly-channel-reports-*.jar \
+java -jar path/to/wildfly-channel-reports-*-jar-with-dependencies.jar \
   find-upgrades "channel-url-or-maven-gav" \
   --repositories "repo1-id::repo1-url,..." \
   [--exclude-pattern "exclude-version-regexp"] \
@@ -27,7 +27,7 @@ java -jar path/to/wildfly-channel-reports-*.jar \
 Example command:
 
 ```shell
-java -jar target/wildfly-channel-reports-*.jar \
+java -jar target/wildfly-channel-reports-*-jar-with-dependencies.jar \
   find-upgrades file:base-channel.yaml \
   --repositories mrrc::https://maven.repository.redhat.com/ga/ \
   --exclude-pattern "[.-]fuse-" \
