@@ -75,7 +75,7 @@ public class FindUpgradesCommandTestCase {
                         "1.1.0.redhat-00001", "1.2.0.fuse-redhat-00001"
                 ))));
 
-        List<String> possibleUpgrades = FindUpgradesCommand.findPossibleUpgrades(STREAM, toVersionObjects(versions), null, null, blocklist);
+        List<String> possibleUpgrades = FindUpgradesCommand.findPossibleUpgrades(STREAM, toVersionObjects(versions), null, null, List.of(blocklist));
         assertThat(possibleUpgrades).containsExactly(
                 "1.0.0", "1.3.0.jre-redhat-00001"
         );

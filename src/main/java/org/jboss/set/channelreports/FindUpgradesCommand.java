@@ -1,5 +1,6 @@
 package org.jboss.set.channelreports;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.aether.RepositoryException;
 import org.eclipse.aether.artifact.Artifact;
@@ -80,7 +81,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     private final Map<MavenArtifact, Map<String, String>> artifactsToRepositories = new HashMap<>();
     private final List<RemoteRepository> repositories = new ArrayList<>();
     private final List<RemoteRepository> channelRepositories = new ArrayList<>();
-    private Blocklist blocklist = null;
+    private final List<Blocklist> blocklists = new ArrayList<>();
 
     public FindUpgradesCommand() {
         discoveryListeners.add(new UpgradeCollectingListener());
@@ -103,18 +104,18 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         }
 
         try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
-            loadBlocklist(resolverFactory);
-            List<Channel> channels = resolverFactory.resolveChannels(List.of(channelCoordinate), channelRepositories);
-            ChannelSession channelSession = new ChannelSession(channels, resolverFactory);
+            final List<Channel> channels = resolverFactory.resolveChannels(List.of(channelCoordinate), channelRepositories);
+            loadBlocklist(resolverFactory, channels);
+            final ChannelSession channelSession = new ChannelSession(channels, resolverFactory);
             Set<Stream> channelStreams = resolveStreams(channels, resolverFactory);
             upgradedStreams.addAll(channelStreams);
 
             for (Stream stream : channelStreams) {
                 MavenArtifact resolvedArtifact = channelSession.resolveMavenArtifact(stream.getGroupId(), stream.getArtifactId(), "pom", null, null);
                 VersionRangeResult versionRangeResult = resolveVersionRange(resolvedArtifact);
-                List<Version> availableVersions = versionRangeResult.getVersions().stream()
+                final List<Version> availableVersions = versionRangeResult.getVersions().stream()
                         .sorted(Comparator.reverseOrder()).toList();
-                List<String> possibleUpgrades = findPossibleUpgrades(stream, availableVersions, inclusionPattern, exclusionPattern, blocklist);
+                final List<String> possibleUpgrades = findPossibleUpgrades(stream, availableVersions, inclusionPattern, exclusionPattern, blocklists);
 
                 for (Version version : availableVersions) {
                     ArtifactRepository repository = versionRangeResult.getRepository(version);
@@ -133,7 +134,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
                     logger.infof("Found upgrades: %s:%s:%s -> %s", a.getGroupId(), a.getArtifactId(), a.getVersion(),
                             String.join(", ", possibleUpgrades));
 
-                    for (UpgradeDiscoveryListener listener: discoveryListeners) {
+                    for (UpgradeDiscoveryListener listener : discoveryListeners) {
                         listener.upgrade(resolvedArtifact, possibleUpgrades);
                     }
                 }
@@ -190,16 +191,26 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         Files.write(file, manifestString.getBytes());
     }
 
-    private void loadBlocklist(VersionResolverFactory resolverFactory) {
-        final BlocklistCoordinate blocklistCoordinate = toBlocklistCoordinate(blocklistCoordinateString);
-        if (blocklistCoordinate != null) {
-            try (MavenVersionsResolver resolver = resolverFactory.create(toChannelRepositories(channelRepositories))) {
-                List<URL> urls = resolver.resolveChannelMetadata(List.of(blocklistCoordinate));
-                if (urls.size() > 0) {
-                    blocklist = Blocklist.from(urls.get(0));
+    private void loadBlocklist(VersionResolverFactory resolverFactory, List<Channel> channels) {
+        try (MavenVersionsResolver resolver = resolverFactory.create(toChannelRepositories(channelRepositories))) {
+            if (!StringUtils.isBlank(blocklistCoordinateString)) {
+                // Blocklist coordinate was given
+                final BlocklistCoordinate coordinate = toBlocklistCoordinate(blocklistCoordinateString);
+                blocklists.addAll(resolveBlocklists(resolver, coordinate));
+            } else {
+                // No blocklist specified, reuse blocklists from channels
+                List<BlocklistCoordinate> blocklistCoordinates = channels.stream().map(Channel::getBlocklistCoordinate)
+                        .toList();
+                for (BlocklistCoordinate coordinate: blocklistCoordinates) {
+                    blocklists.addAll(resolveBlocklists(resolver, coordinate));
                 }
             }
         }
+    }
+
+    private List<Blocklist> resolveBlocklists(MavenVersionsResolver resolver, BlocklistCoordinate coordinate) {
+        List<URL> urls = resolver.resolveChannelMetadata(List.of(coordinate));
+        return urls.stream().map(Blocklist::from).toList();
     }
 
     /**
@@ -208,17 +219,20 @@ public class FindUpgradesCommand extends MavenBasedCommand {
      * @param versions List of available versions, has to be sorted from highest to lowest
      * @return A subset of the list passed in `versions` argument, containing only highest versions of each stream.
      */
-    static List<String> findPossibleUpgrades(Stream stream, List<? extends Version> versions, Pattern include, Pattern exclude, Blocklist blocklist) {
+    static List<String> findPossibleUpgrades(Stream stream, List<? extends Version> versions, Pattern include,
+                                             Pattern exclude, List<Blocklist> blocklists) {
         final Set<String> blockedVersions = new HashSet<>();
-        if (blocklist != null) {
-            blockedVersions.addAll(blocklist.getVersionsFor(stream.getGroupId(), stream.getArtifactId()));
+        if (blocklists != null) {
+            for (Blocklist blocklist : blocklists) {
+                blockedVersions.addAll(blocklist.getVersionsFor(stream.getGroupId(), stream.getArtifactId()));
+            }
         }
 
         // Apply inclusions, exclusions and blocklist, only work with the resulting subset
         versions = versions.stream()
                 .filter(v -> include == null || include.matcher(v.toString()).find())
                 .filter(v -> exclude == null || !exclude.matcher(v.toString()).find())
-                .filter(v -> blocklist == null || !blockedVersions.contains(v.toString()))
+                .filter(v -> !blockedVersions.contains(v.toString()))
                 .toList();
 
         if (versions.isEmpty()) {

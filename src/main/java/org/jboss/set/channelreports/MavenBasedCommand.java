@@ -29,7 +29,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -41,8 +40,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 abstract class MavenBasedCommand implements Callable<Integer> {
-
-    protected static final Path LOCAL_MAVEN_REPO = Paths.get(System.getProperty("user.home"), ".m2", "repository");
 
     protected static final Logger logger = Logger.getLogger(CompareChannelsCommand.class);
 
@@ -99,7 +96,7 @@ abstract class MavenBasedCommand implements Callable<Integer> {
 
     protected static ChannelCoordinate toChannelCoordinate(String coordinateString) {
         if (StringUtils.isBlank(coordinateString)) {
-            return null;
+            throw new IllegalArgumentException("The channel coordinate has to be a non-empty string.");
         }
         ChannelCoordinate coordinate;
         try {
@@ -111,7 +108,7 @@ abstract class MavenBasedCommand implements Callable<Integer> {
             } else if (segments.length == 3) {
                 coordinate = new ChannelCoordinate(segments[0], segments[1], segments[2]);
             } else {
-                throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
+                throw new IllegalArgumentException("The channel coordinate is not a URL or a GAV: " + coordinateString);
             }
         }
         return coordinate;
@@ -137,6 +134,7 @@ abstract class MavenBasedCommand implements Callable<Integer> {
         return coordinate;
     }
 
+    @SuppressWarnings("deprecation")
     protected static RepositorySystem newRepositorySystem() {
         final DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
         locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
