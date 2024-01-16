@@ -6,6 +6,22 @@
     <artifactId>wildfly-channel-reports</artifactId>
     <version>1.0.3-SNAPSHOT</version>
 
+    <name>Wildfly Channel Reports</name>
+    <description>Report generation tool for the Wildfly Channels</description>
+    <url>https://github.com/TomasHofman/wildfly-channel-reports</url>
+    <developers>
+        <developer>
+            <name>Tomas Hofman</name>
+            <email>thofman@redhat.com</email>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
     <scm>
         <connection>scm:git:git://github.com/TomasHofman/wildfly-channel-reports.git</connection>
         <developerConnection>scm:git:git@github.com:TomasHofman/wildfly-channel-reports.git</developerConnection>
