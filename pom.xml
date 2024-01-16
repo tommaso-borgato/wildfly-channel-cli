@@ -154,26 +154,18 @@
                 </configuration>
             </plugin>
 
-            <!-- Pre-configure the exec:java goal for dev purposes -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <mainClass>org.jboss.set.channelreports.Main</mainClass>
-                    <commandlineArgs>compare-channels file:base-channel.yaml file:target-channel.yaml</commandlineArgs>
-                </configuration>
-            </plugin>
-
-            <!-- Don't create regular JAR -->
+            <!-- Produce the source JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
+                <artifactId>maven-source-plugin</artifactId>
                 <version>3.3.0</version>
                 <executions>
                     <execution>
-                        <id>default-jar</id>
-                        <phase />
+                        <id>attach-sources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -182,7 +174,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.6.0</version>
                 <configuration>
                     <archive>
                         <index>true</index>
