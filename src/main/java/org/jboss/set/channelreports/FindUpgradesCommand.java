@@ -57,7 +57,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
             description = "Comma separated repositories URLs where the channels should be looked for, if a channel GAV is given.")
     private List<String> channelRepositoriesUrls;
 
-    @CommandLine.Option(names = "--repositories", split = ",",
+    @CommandLine.Option(names = "--repositories", split = ",", required = true,
             description = "Comma separated repositories URLs where component upgrades should be looked for. Format is either `URL1,URL2,...` or `ID1::URL1,ID2::URL2,...`")
     private List<String> repositoryUrls;
 
