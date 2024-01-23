@@ -7,6 +7,7 @@ public class Main {
         CommandLine commandLine = new CommandLine(new MainCommand());
         commandLine.addSubcommand(new CompareChannelsCommand());
         commandLine.addSubcommand(new FindUpgradesCommand());
+        commandLine.addSubcommand(new CreateManifestFromRepoCommand());
         commandLine.execute(args);
     }
 }

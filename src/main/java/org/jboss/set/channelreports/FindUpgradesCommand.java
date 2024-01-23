@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -182,13 +183,13 @@ public class FindUpgradesCommand extends MavenBasedCommand {
                 .build();
 
         logger.infof("Writing report file into %s", REPORT_FILE.toString());
-        Files.write(REPORT_FILE, reportHtml.getBytes());
+        Files.write(REPORT_FILE, reportHtml.getBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
     }
 
     private void writeManifestFile(Path file, Collection<Stream> streams) throws IOException {
         ChannelManifest manifest = new ChannelManifest(null, null, null, streams);
         String manifestString = ChannelManifestMapper.toYaml(manifest);
-        Files.write(file, manifestString.getBytes());
+        Files.write(file, manifestString.getBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
     }
 
     private void loadBlocklist(VersionResolverFactory resolverFactory, List<Channel> channels) {
