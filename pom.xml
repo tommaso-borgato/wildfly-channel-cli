@@ -4,7 +4,7 @@
 
     <groupId>org.jboss.set.channelreports</groupId>
     <artifactId>wildfly-channel-reports</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6-SNAPSHOT</version>
 
     <name>Wildfly Channel Reports</name>
     <description>Report generation tool for the Wildfly Channels</description>
@@ -26,7 +26,7 @@
         <connection>scm:git:git://github.com/TomasHofman/wildfly-channel-reports.git</connection>
         <developerConnection>scm:git:git@github.com:TomasHofman/wildfly-channel-reports.git</developerConnection>
         <url>https://github.com/TomasHofman/wildfly-channel-reports</url>
-        <tag>1.0.5</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
