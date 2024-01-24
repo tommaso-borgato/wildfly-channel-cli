@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channelreports.utils;
 
 import org.assertj.core.api.Assertions;
 import org.jboss.set.channelreports.utils.VersionUtils;

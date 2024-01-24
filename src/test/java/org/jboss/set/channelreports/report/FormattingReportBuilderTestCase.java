@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channelreports.report;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.jboss.set.channelreports.report.FormattingReportBuilder;
