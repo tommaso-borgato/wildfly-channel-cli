@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channelreports.utils;
 
 import java.util.Arrays;
 import java.util.Collection;

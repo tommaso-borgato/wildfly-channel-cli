@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channelreports.report;
 
 import j2html.tags.ContainerTag;
 import j2html.tags.DomContent;
@@ -33,7 +33,7 @@ import static j2html.TagCreator.th;
 import static j2html.TagCreator.thead;
 import static j2html.TagCreator.tr;
 import static j2html.TagCreator.ul;
-import static org.jboss.set.channelreports.VersionUtils.isTheSameMinor;
+import static org.jboss.set.channelreports.utils.VersionUtils.isTheSameMinor;
 
 public class FormattingReportBuilder {
 

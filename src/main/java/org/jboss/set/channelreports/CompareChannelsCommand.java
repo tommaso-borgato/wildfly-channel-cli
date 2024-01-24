@@ -2,6 +2,8 @@ package org.jboss.set.channelreports;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.aether.repository.RemoteRepository;
+import org.jboss.set.channelreports.report.FormattingReportBuilder;
+import org.jboss.set.channelreports.utils.ConversionUtils;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelSession;
 import org.wildfly.channel.MavenArtifact;
@@ -34,9 +36,9 @@ public class CompareChannelsCommand extends MavenBasedCommand {
 
     @Override
     public Integer call() throws Exception {
-        final ChannelCoordinate baseCoordinate = toChannelCoordinate(baseChannelCoordinate);
-        final ChannelCoordinate targetCoordinate = toChannelCoordinate(targetChannelCoordinate);
-        final List<RemoteRepository> channelRepositories = toRepositoryList(channelRepositoriesUrls);
+        final ChannelCoordinate baseCoordinate = ConversionUtils.toChannelCoordinate(baseChannelCoordinate);
+        final ChannelCoordinate targetCoordinate = ConversionUtils.toChannelCoordinate(targetChannelCoordinate);
+        final List<RemoteRepository> channelRepositories = ConversionUtils.toRepositoryList(channelRepositoriesUrls);
 
         try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
             List<Channel> baseChannels = resolverFactory.resolveChannels(List.of(baseCoordinate), channelRepositories);

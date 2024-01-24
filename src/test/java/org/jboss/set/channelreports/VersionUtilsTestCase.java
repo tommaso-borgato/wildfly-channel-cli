@@ -1,6 +1,7 @@
 package org.jboss.set.channelreports;
 
 import org.assertj.core.api.Assertions;
+import org.jboss.set.channelreports.utils.VersionUtils;
 import org.junit.jupiter.api.Test;
 
 public class VersionUtilsTestCase {

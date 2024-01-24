@@ -10,6 +10,10 @@ import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResult;
 import org.eclipse.aether.version.Version;
+import org.jboss.set.channelreports.report.FormattingReportBuilder;
+import org.jboss.set.channelreports.utils.ConversionUtils;
+import org.jboss.set.channelreports.utils.IOUtils;
+import org.jboss.set.channelreports.utils.VersionUtils;
 import org.wildfly.channel.Blocklist;
 import org.wildfly.channel.BlocklistCoordinate;
 import org.wildfly.channel.Channel;
@@ -91,9 +95,9 @@ public class FindUpgradesCommand extends MavenBasedCommand {
 
     @Override
     public Integer call() throws Exception {
-        final ChannelCoordinate channelCoordinate = toChannelCoordinate(channelCoordinateString);
-        channelRepositories.addAll(toRepositoryList(channelRepositoriesUrls));
-        repositories.addAll(toRepositoryList(repositoryUrls));
+        final ChannelCoordinate channelCoordinate = ConversionUtils.toChannelCoordinate(channelCoordinateString);
+        channelRepositories.addAll(ConversionUtils.toRepositoryList(channelRepositoriesUrls));
+        repositories.addAll(ConversionUtils.toRepositoryList(repositoryUrls));
 
         Pattern inclusionPattern = null;
         Pattern exclusionPattern = null;
@@ -150,9 +154,9 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         writeReportFile();
 
         // Write manifest file that contains only upgraded components
-        writeManifestFile(DIFF_MANIFEST_FILE, diffStreams);
+        IOUtils.writeManifestFile(DIFF_MANIFEST_FILE, diffStreams);
         // Write manifest file that contains both original and upgraded components
-        writeManifestFile(UPGRADED_MANIFEST_FILE, upgradedStreams);
+        IOUtils.writeManifestFile(UPGRADED_MANIFEST_FILE, upgradedStreams);
 
         return CommandLine.ExitCode.OK;
     }
@@ -175,7 +179,7 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     }
 
     private void writeReportFile() throws IOException {
-        List<Repository> discoveryRepositories = toChannelRepositories(repositories);
+        List<Repository> discoveryRepositories = ConversionUtils.toChannelRepositories(repositories);
         String reportHtml = new FormattingReportBuilder()
                 .withRepositories(discoveryRepositories)
                 .withUpgrades(upgrades)
@@ -186,17 +190,12 @@ public class FindUpgradesCommand extends MavenBasedCommand {
         Files.write(REPORT_FILE, reportHtml.getBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
     }
 
-    private void writeManifestFile(Path file, Collection<Stream> streams) throws IOException {
-        ChannelManifest manifest = new ChannelManifest(null, null, null, streams);
-        String manifestString = ChannelManifestMapper.toYaml(manifest);
-        Files.write(file, manifestString.getBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
-    }
-
     private void loadBlocklist(VersionResolverFactory resolverFactory, List<Channel> channels) {
-        try (MavenVersionsResolver resolver = resolverFactory.create(toChannelRepositories(channelRepositories))) {
+        try (MavenVersionsResolver resolver =
+                     resolverFactory.create(ConversionUtils.toChannelRepositories(channelRepositories))) {
             if (!StringUtils.isBlank(blocklistCoordinateString)) {
                 // Blocklist coordinate was given
-                final BlocklistCoordinate coordinate = toBlocklistCoordinate(blocklistCoordinateString);
+                final BlocklistCoordinate coordinate = ConversionUtils.toBlocklistCoordinate(blocklistCoordinateString);
                 blocklists.addAll(resolveBlocklists(resolver, coordinate));
             } else {
                 // No blocklist specified, reuse blocklists from channels
