@@ -9,6 +9,7 @@ public class Main {
         commandLine.addSubcommand(new FindUpgradesCommand());
         commandLine.addSubcommand(new CreateManifestFromRepoCommand());
         commandLine.addSubcommand(new CreateChannelCommand());
+        commandLine.addSubcommand(new MergeManifestsCommand());
         commandLine.execute(args);
     }
 }

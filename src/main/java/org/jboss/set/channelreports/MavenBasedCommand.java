@@ -13,6 +13,7 @@ import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.transport.file.FileTransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.jboss.logging.Logger;
+import org.jboss.set.channelreports.utils.ConversionUtils;
 import org.wildfly.channel.BlocklistCoordinate;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelManifest;
@@ -66,6 +67,15 @@ abstract class MavenBasedCommand implements Callable<Integer> {
             List<URL> resolvedBaseManifests = resolver.resolveChannelMetadata(manifestCoordinates);
             List<ChannelManifest> baseManifests = resolvedBaseManifests.stream().map(ChannelManifestMapper::from).toList();
             return baseManifests.stream().flatMap(manifest -> manifest.getStreams().stream()).collect(Collectors.toSet());
+        }
+    }
+
+    protected ChannelManifest resolveManifest(ChannelManifestCoordinate coordinate, List<Repository> repositories) {
+        try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
+            try (MavenVersionsResolver resolver = resolverFactory.create(repositories)) {
+                List<URL> urls = resolver.resolveChannelMetadata(List.of(coordinate));
+                return ChannelManifestMapper.from(urls.get(0));
+            }
         }
     }
 
