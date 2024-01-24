@@ -1,13 +1,33 @@
 # wildfly-channel-reports
 
-Comparison and report generation tool for [Wildfly Channels](https://github.com/wildfly-extras/wildfly-channel).
+Manipulation and report generation tool for [Wildfly Channels](https://github.com/wildfly-extras/wildfly-channel).
 
 ## Usage
 
-For general usage information, run:
+Execute the fat JAR with `--help` option to get up-to-date help message:
 
-```shell
-java -jar path/to/wildfly-channel-reports-*-jar-with-dependencies.jar --help
+```text
+$ java -jar path/to/wildfly-channel-reports-*-jar-with-dependencies.jar --help
+Usage: <main class> [COMMAND]
+Commands:
+  compare-channels           Generates report that identifies intersecting
+                               streams of two given channels, and highlights
+                               streams where their versions differ.
+  find-upgrades              Generates report showing possible upgrades for
+                               streams in given channel by directly querying
+                               given Maven repositories. This also generates
+                               two manifest files, diff-manifest.yaml and
+                               upgraded-manifest.yaml, containing upgraded
+                               streams and all streams with upgraded versions
+                               respectively.
+  create-manifest-from-repo  Scans a local maven repository and creates a
+                               manifest file representing the GAVs existing in
+                               the repository.
+  create-channel             Creates a channel file according to given
+                               parameters.
+  merge-manifests            Merges two manifest. The second manifest streams
+                               always override the first manifest streams.
+
 ```
 
 ### `find-upgrades` command
@@ -24,7 +44,7 @@ java -jar path/to/wildfly-channel-reports-*-jar-with-dependencies.jar \
   [--blocklist-coordinate "blocklist-ulr-or-maven-gav"]
 ```
 
-Example command:
+Example command invocation:
 
 ```shell
 java -jar target/wildfly-channel-reports-*-jar-with-dependencies.jar \
