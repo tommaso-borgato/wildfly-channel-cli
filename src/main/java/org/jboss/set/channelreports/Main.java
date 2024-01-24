@@ -8,6 +8,7 @@ public class Main {
         commandLine.addSubcommand(new CompareChannelsCommand());
         commandLine.addSubcommand(new FindUpgradesCommand());
         commandLine.addSubcommand(new CreateManifestFromRepoCommand());
+        commandLine.addSubcommand(new CreateChannelCommand());
         commandLine.execute(args);
     }
 }
