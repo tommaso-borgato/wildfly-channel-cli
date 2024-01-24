@@ -1,7 +1,6 @@
-package org.jboss.set.channelreports.report;
+package org.jboss.set.channel.cli.report;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.jboss.set.channelreports.report.FormattingReportBuilder;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.wildfly.channel.MavenArtifact;

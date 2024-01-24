@@ -1,7 +1,7 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channel.cli;
 
-import org.jboss.set.channelreports.utils.ConversionUtils;
-import org.jboss.set.channelreports.utils.IOUtils;
+import org.jboss.set.channel.cli.utils.ConversionUtils;
+import org.jboss.set.channel.cli.utils.IOUtils;
 import org.wildfly.channel.BlocklistCoordinate;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelManifestCoordinate;

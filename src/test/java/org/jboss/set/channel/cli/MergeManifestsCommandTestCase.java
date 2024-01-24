@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channel.cli;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.groups.Tuple;

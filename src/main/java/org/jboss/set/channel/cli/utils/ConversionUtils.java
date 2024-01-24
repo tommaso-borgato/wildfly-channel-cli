@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports.utils;
+package org.jboss.set.channel.cli.utils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.aether.repository.RemoteRepository;

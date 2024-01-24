@@ -1,9 +1,9 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channel.cli;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.jboss.set.channelreports.report.FormattingReportBuilder;
-import org.jboss.set.channelreports.utils.ConversionUtils;
+import org.jboss.set.channel.cli.report.FormattingReportBuilder;
+import org.jboss.set.channel.cli.utils.ConversionUtils;
 import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelSession;
 import org.wildfly.channel.MavenArtifact;

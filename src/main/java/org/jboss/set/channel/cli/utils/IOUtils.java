@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports.utils;
+package org.jboss.set.channel.cli.utils;
 
 import org.jboss.logging.Logger;
 import org.wildfly.channel.Channel;

@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channel.cli;
 
 import org.eclipse.aether.version.Version;
 import org.junit.jupiter.api.Test;

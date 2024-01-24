@@ -2,13 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.jboss.set.channelreports</groupId>
-    <artifactId>wildfly-channel-reports</artifactId>
+    <groupId>org.jboss.set.channel</groupId>
+    <artifactId>wildfly-channel-cli</artifactId>
     <version>1.0.6-SNAPSHOT</version>
 
-    <name>Wildfly Channel Reports</name>
-    <description>Report generation tool for the Wildfly Channels</description>
-    <url>https://github.com/TomasHofman/wildfly-channel-reports</url>
+    <name>Wildfly Channel CLI Tool</name>
+    <description>CLI tool for the Wildfly Channel metadata files manipulation and report generation</description>
+    <url>https://github.com/TomasHofman/wildfly-channel-cli</url>
     <developers>
         <developer>
             <name>Tomas Hofman</name>
@@ -23,9 +23,9 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:git://github.com/TomasHofman/wildfly-channel-reports.git</connection>
-        <developerConnection>scm:git:git@github.com:TomasHofman/wildfly-channel-reports.git</developerConnection>
-        <url>https://github.com/TomasHofman/wildfly-channel-reports</url>
+        <connection>scm:git:git://github.com/TomasHofman/wildfly-channel-cli.git</connection>
+        <developerConnection>scm:git:git@github.com:TomasHofman/wildfly-channel-cli.git</developerConnection>
+        <url>https://github.com/TomasHofman/wildfly-channel-cli</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -179,7 +179,7 @@
                     <archive>
                         <index>true</index>
                         <manifest>
-                            <mainClass>org.jboss.set.channelreports.Main</mainClass>
+                            <mainClass>org.jboss.set.channel.cli.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

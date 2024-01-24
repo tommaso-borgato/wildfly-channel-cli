@@ -1,9 +1,10 @@
-package org.jboss.set.channelreports.report;
+package org.jboss.set.channel.cli.report;
 
 import j2html.tags.ContainerTag;
 import j2html.tags.DomContent;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jboss.logging.Logger;
+import org.jboss.set.channel.cli.utils.VersionUtils;
 import org.wildfly.channel.MavenArtifact;
 import org.wildfly.channel.Repository;
 
@@ -33,7 +34,6 @@ import static j2html.TagCreator.th;
 import static j2html.TagCreator.thead;
 import static j2html.TagCreator.tr;
 import static j2html.TagCreator.ul;
-import static org.jboss.set.channelreports.utils.VersionUtils.isTheSameMinor;
 
 public class FormattingReportBuilder {
 
@@ -170,13 +170,13 @@ public class FormattingReportBuilder {
                         + ":" + artifact.getVersion())
                         .withStyle(PADDING + GAV_STYLES));
                 cells.add(td().with(
-                        span(version).withStyle(isTheSameMinor(artifact.getVersion(), version) ? BOLD_FONT : ""),
+                        span(version).withStyle(VersionUtils.isTheSameMinor(artifact.getVersion(), version) ? BOLD_FONT : ""),
                         repoId != null ? span(repoId).withStyle(REPO_LABEL_STYLES + repositoryColor(repoId)) : span()
                 ).withStyle(PADDING));
             } else {
                 cells.add(td(rawHtml("&#8627;")).withStyle(SUBITEM_STYLES));
                 cells.add(td().with(
-                        span(version).withStyle(isTheSameMinor(artifact.getVersion(), version) ? BOLD_FONT : ""),
+                        span(version).withStyle(VersionUtils.isTheSameMinor(artifact.getVersion(), version) ? BOLD_FONT : ""),
                         repoId != null ? span(repoId).withStyle(REPO_LABEL_STYLES + repositoryColor(repoId)) : span()
                 ).withStyle(PADDING));
             }

@@ -1,4 +1,4 @@
-package org.jboss.set.channelreports;
+package org.jboss.set.channel.cli;
 
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Reader;
