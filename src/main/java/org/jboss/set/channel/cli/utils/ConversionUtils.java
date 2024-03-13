@@ -10,6 +10,7 @@ import org.wildfly.channel.maven.ChannelCoordinate;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -78,7 +79,11 @@ public final class ConversionUtils {
             } else if (segments.length == 3) {
                 coordinate = new ChannelCoordinate(segments[0], segments[1], segments[2]);
             } else {
-                throw new IllegalArgumentException("The channel coordinate is not a URL or a GAV: " + coordinateString);
+                try {
+                    coordinate = new ChannelCoordinate(Path.of(coordinateString).toUri().toURL());
+                } catch (MalformedURLException e2) {
+                    throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
+                }
             }
         }
         return coordinate;
@@ -98,7 +103,11 @@ public final class ConversionUtils {
             } else if (segments.length == 3) {
                 coordinate = new BlocklistCoordinate(segments[0], segments[1], segments[2]);
             } else {
-                throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
+                try {
+                    coordinate = new BlocklistCoordinate(Path.of(coordinateString).toUri().toURL());
+                } catch (MalformedURLException e2) {
+                    throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
+                }
             }
         }
         return coordinate;
@@ -118,7 +127,11 @@ public final class ConversionUtils {
             } else if (segments.length == 3) {
                 coordinate = new ChannelManifestCoordinate(segments[0], segments[1], segments[2]);
             } else {
-                throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
+                try {
+                    coordinate = new ChannelManifestCoordinate(Path.of(coordinateString).toUri().toURL());
+                } catch (MalformedURLException e2) {
+                    throw new IllegalArgumentException("Given string is not URL or GAV: " + coordinateString);
+                }
             }
         }
         return coordinate;
@@ -127,7 +140,6 @@ public final class ConversionUtils {
     public static Channel.NoStreamStrategy toNoStreamStrategy(String strategyString) {
         if (strategyString == null)
             return null;
-
         return switch (strategyString) {
             case "latest" -> Channel.NoStreamStrategy.LATEST;
             case "maven-latest" -> Channel.NoStreamStrategy.MAVEN_LATEST;
