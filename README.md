@@ -1,4 +1,4 @@
-# wildfly-channel-reports
+# Wildfly Channel CLI
 
 Manipulation and report generation tool for [Wildfly Channels](https://github.com/wildfly-extras/wildfly-channel).
 
@@ -7,7 +7,7 @@ Manipulation and report generation tool for [Wildfly Channels](https://github.co
 Execute the fat JAR with `--help` option to get up-to-date help message:
 
 ```text
-$ java -jar path/to/wildfly-channel-reports-*-jar-with-dependencies.jar --help
+$ java -jar path/to/wildfly-channel-cli-*-jar-with-dependencies.jar --help
 Usage: <main class> [COMMAND]
 Commands:
   compare-channels           Generates report that identifies intersecting

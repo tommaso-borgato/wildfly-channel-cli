@@ -4,7 +4,7 @@ import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 
-@CommandLine.Command()
+@CommandLine.Command(name = "java -jar wildfly-channel-cli*.jar")
 class MainCommand implements Callable<Integer> {
 
     @CommandLine.Spec
