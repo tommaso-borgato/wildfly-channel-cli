@@ -125,6 +125,9 @@ public final class ConversionUtils {
     }
 
     public static Channel.NoStreamStrategy toNoStreamStrategy(String strategyString) {
+        if (strategyString == null)
+            return null;
+
         return switch (strategyString) {
             case "latest" -> Channel.NoStreamStrategy.LATEST;
             case "maven-latest" -> Channel.NoStreamStrategy.MAVEN_LATEST;

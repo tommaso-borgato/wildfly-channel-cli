@@ -18,14 +18,17 @@ import java.util.Map;
         description = "Merges two manifest. The second manifest streams always override the first manifest streams.")
 public class MergeManifestsCommand extends MavenBasedCommand {
 
-    @CommandLine.Parameters(index = "0", description = "First manifest coordinate (URL of GAV)")
+    @CommandLine.Parameters(index = "0", description = "First manifest coordinate (URL or GAV)",
+            paramLabel = "manifestCoordinate1")
     private String firstManifestCoordinateString;
 
-    @CommandLine.Parameters(index = "1", description = "Second manifest coordinate (URL or GAV)")
+    @CommandLine.Parameters(index = "1", description = "Second manifest coordinate (URL or GAV)",
+            paramLabel = "manifestCoordinate2")
     private String secondManifestCoordinateString;
 
     @CommandLine.Option(names = "--manifest-repositories", split = ",",
-            description = "Comma separated repositories URLs where the manifest should be looked for, if they need to be resolved via maven.")
+            description = "Comma separated repositories URLs where the manifest should be looked for, if they need to be resolved via maven.",
+    paramLabel = "URL")
     private List<String> manifestRepositoriesUrls;
 
     @CommandLine.Option(names = {"--output-file", "-o"}, defaultValue = "manifest.yaml",

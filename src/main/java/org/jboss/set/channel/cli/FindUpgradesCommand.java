@@ -53,15 +53,18 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     private final Path DIFF_MANIFEST_FILE = Path.of("diff-manifest.yaml");
     private final Path UPGRADED_MANIFEST_FILE = Path.of("upgraded-manifest.yaml");
 
-    @CommandLine.Parameters(index = "0", description = "Base channel coordinate (URL of GAV).")
+    @CommandLine.Parameters(index = "0", description = "Base channel coordinate (URL of GAV).",
+            paramLabel = "channelCoordinate")
     private String channelCoordinateString;
 
     @CommandLine.Option(names = "--channel-repositories", split = ",",
-            description = "Comma separated repositories URLs where the channels should be looked for, if a channel GAV is given.")
+            description = "Comma separated repositories URLs where the channels should be looked for, if a channel GAV is given.",
+            paramLabel = "URL")
     private List<String> channelRepositoriesUrls;
 
     @CommandLine.Option(names = "--repositories", split = ",", required = true,
-            description = "Comma separated repositories URLs where component upgrades should be looked for. Format is either `URL1,URL2,...` or `ID1::URL1,ID2::URL2,...`")
+            description = "Comma separated repositories URLs where component upgrades should be looked for. Format is either `URL1,URL2,...` or `ID1::URL1,ID2::URL2,...`",
+            paramLabel = "URL")
     private List<String> repositoryUrls;
 
     @CommandLine.Option(names = "--include-pattern",
@@ -73,7 +76,8 @@ public class FindUpgradesCommand extends MavenBasedCommand {
     private String versionsExclude;
 
     @CommandLine.Option(names = "--blocklist-coordinate",
-            description = "Blocklist coordinate (URL or Maven GAV)")
+            description = "Blocklist coordinate (URL or GAV)",
+            paramLabel = "blocklistCoordinate")
     private String blocklistCoordinateString;
 
     private final ArrayList<Pair<MavenArtifact, List<String>>> upgrades = new ArrayList<>();

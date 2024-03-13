@@ -23,7 +23,8 @@ public class CreateManifestFromRepoCommand implements Callable<Integer> {
     private static final String MAVEN_METADATA_XML = "maven-metadata.xml";
 
     @CommandLine.Parameters(index = "0",
-            description = "Local Maven repository path to generate the manifest from.")
+            description = "Local Maven repository path to generate the manifest from.",
+            paramLabel = "path")
     private Path repositoryPath;
 
     @CommandLine.Option(names = {"--output-file", "-o"}, defaultValue = "manifest.yaml",

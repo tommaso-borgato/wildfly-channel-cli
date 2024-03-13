@@ -24,14 +24,18 @@ import java.util.Set;
                 "streams where their versions differ.")
 public class CompareChannelsCommand extends MavenBasedCommand {
 
-    @CommandLine.Parameters(index = "0", description = "Base channel coordinate (URL of GAV)")
+    @CommandLine.Parameters(index = "0", description = "Base channel coordinate (URL of GAV)",
+            paramLabel = "channelCoordinate")
     private String baseChannelCoordinate;
 
-    @CommandLine.Parameters(index = "1", description = "Comparison channel coordinate (URL or GAV)")
+    @CommandLine.Parameters(index = "1", description = "Comparison channel coordinate (URL or GAV)",
+            paramLabel = "channelCoordinate")
     private String targetChannelCoordinate;
 
-    @CommandLine.Option(names = "--channel-repositories", description = "Comma separated repositories URLs where the channels should be looked for",
-            split = ",")
+    @CommandLine.Option(names = "--channel-repositories",
+            description = "Comma separated repositories URLs where the channels should be looked for",
+            split = ",",
+            paramLabel = "URL")
     private List<String> channelRepositoriesUrls;
 
     @Override

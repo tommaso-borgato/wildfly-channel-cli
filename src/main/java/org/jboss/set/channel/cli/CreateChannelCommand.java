@@ -33,15 +33,18 @@ public class CreateChannelCommand implements Callable<Integer> {
     private List<String> repositoriesString;
 
     @CommandLine.Option(names = {"--manifest-coordinate", "-m"}, required = true,
-            description = "Manifest coordinate, GAV or URL.")
+            description = "Manifest coordinate, GAV or URL.",
+            paramLabel = "manifestCoordinate")
     private String manifestCoordinateString;
 
     @CommandLine.Option(names = {"--blocklist-coordinate", "-b"},
-            description = "Blocklist coordinate, GAV or URL.")
+            description = "Blocklist coordinate, GAV or URL.",
+            paramLabel = "blocklistCoordinate")
     private String blocklistCoordinateString;
 
     @CommandLine.Option(names = {"--no-stream-strategy", "-s"},
-            description = "No stream strategy: latest, maven-latest, maven-release or none.")
+            description = "No stream strategy: latest, maven-latest, maven-release or none.",
+            paramLabel = "strategy")
     private String noStreamStrategyString;
 
     @Override
