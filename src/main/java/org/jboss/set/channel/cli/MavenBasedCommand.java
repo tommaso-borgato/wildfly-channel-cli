@@ -15,8 +15,10 @@ import org.wildfly.channel.Channel;
 import org.wildfly.channel.ChannelManifest;
 import org.wildfly.channel.ChannelManifestCoordinate;
 import org.wildfly.channel.ChannelManifestMapper;
+import org.wildfly.channel.ChannelMapper;
 import org.wildfly.channel.Repository;
 import org.wildfly.channel.Stream;
+import org.wildfly.channel.maven.ChannelCoordinate;
 import org.wildfly.channel.maven.VersionResolverFactory;
 import org.wildfly.channel.spi.MavenVersionsResolver;
 
@@ -67,6 +69,15 @@ abstract class MavenBasedCommand implements Callable<Integer> {
             try (MavenVersionsResolver resolver = resolverFactory.create(repositories)) {
                 List<URL> urls = resolver.resolveChannelMetadata(List.of(coordinate));
                 return ChannelManifestMapper.from(urls.get(0));
+            }
+        }
+    }
+
+    protected Channel resolveChannel(ChannelCoordinate coordinate, List<Repository> repositories) {
+        try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
+            try (MavenVersionsResolver resolver = resolverFactory.create(repositories)) {
+                List<URL> urls = resolver.resolveChannelMetadata(List.of(coordinate));
+                return ChannelMapper.from(urls.get(0));
             }
         }
     }

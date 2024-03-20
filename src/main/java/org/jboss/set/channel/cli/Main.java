@@ -10,6 +10,7 @@ public class Main {
         commandLine.addSubcommand(new CreateManifestFromRepoCommand());
         commandLine.addSubcommand(new CreateChannelCommand());
         commandLine.addSubcommand(new MergeManifestsCommand());
+        commandLine.addSubcommand(new ExtractRepositoriesCommand());
         commandLine.execute(args);
     }
 }
