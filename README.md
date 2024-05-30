@@ -8,7 +8,7 @@ Execute the fat JAR with `--help` option to get up-to-date help message:
 
 ```text
 $ java -jar path/to/wildfly-channel-cli-*-jar-with-dependencies.jar --help
-Usage: <main class> [COMMAND]
+Usage: java -jar wildfly-channel-cli*.jar [COMMAND]
 Commands:
   compare-channels           Generates report that identifies intersecting
                                streams of two given channels, and highlights
@@ -27,7 +27,9 @@ Commands:
                                parameters.
   merge-manifests            Merges two manifest. The second manifest streams
                                always override the first manifest streams.
-
+  extract-repositories       Extract URLs of the channel repositories, print
+                               them on stdout.
+  extract-manifest-url       Extract manifest URL from given channel.
 ```
 
 ### `find-upgrades` command

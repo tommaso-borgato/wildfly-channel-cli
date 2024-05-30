@@ -65,10 +65,14 @@ abstract class MavenBasedCommand implements Callable<Integer> {
     }
 
     protected ChannelManifest resolveManifest(ChannelManifestCoordinate coordinate, List<Repository> repositories) {
+        return ChannelManifestMapper.from(resolveManifestUrl(coordinate, repositories));
+    }
+
+    protected URL resolveManifestUrl(ChannelManifestCoordinate coordinate, List<Repository> repositories) {
         try (VersionResolverFactory resolverFactory = new VersionResolverFactory(system, systemSession)) {
             try (MavenVersionsResolver resolver = resolverFactory.create(repositories)) {
                 List<URL> urls = resolver.resolveChannelMetadata(List.of(coordinate));
-                return ChannelManifestMapper.from(urls.get(0));
+                return urls.get(0);
             }
         }
     }

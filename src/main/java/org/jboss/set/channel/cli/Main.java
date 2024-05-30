@@ -11,6 +11,7 @@ public class Main {
         commandLine.addSubcommand(new CreateChannelCommand());
         commandLine.addSubcommand(new MergeManifestsCommand());
         commandLine.addSubcommand(new ExtractRepositoriesCommand());
+        commandLine.addSubcommand(new ExtractManifestUrlCommand());
         commandLine.execute(args);
     }
 }
