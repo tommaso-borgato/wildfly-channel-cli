@@ -50,6 +50,7 @@
         <version.j2html>1.6.0</version.j2html>
         <version.junit>5.10.0</version.junit>
         <version.assertj>3.24.2</version.assertj>
+        <version.pme>4.17</version.pme>
     </properties>
 
     <dependencies>
@@ -128,6 +129,33 @@
             <version>${version.j2html}</version>
         </dependency>
 
+        <!-- PME -->
+        <dependency>
+            <groupId>org.commonjava.maven.ext</groupId>
+            <artifactId>pom-manipulation-core</artifactId>
+            <version>${version.pme}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-annotations</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+            <version>${version.maven}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-compat</artifactId>
+            <version>${version.maven}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -182,9 +210,12 @@
                             <mainClass>org.jboss.set.channel.cli.Main</mainClass>
                         </manifest>
                     </archive>
-                    <descriptorRefs>
+                    <!--<descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
+                    </descriptorRefs>-->
+                    <descriptors>
+                        <descriptor>src/assembly/jar.xml</descriptor>
+                    </descriptors>
                     <appendAssemblyId>true</appendAssemblyId>
                 </configuration>
                 <executions>

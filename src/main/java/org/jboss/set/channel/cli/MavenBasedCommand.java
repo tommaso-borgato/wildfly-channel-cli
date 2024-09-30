@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 
 abstract class MavenBasedCommand implements Callable<Integer> {
 
-    protected static final Logger logger = Logger.getLogger(CompareChannelsCommand.class);
+    protected static final Logger logger = Logger.getLogger(MavenBasedCommand.class);
 
 
     protected final RepositorySystem system;

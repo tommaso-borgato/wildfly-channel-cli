@@ -1,5 +1,6 @@
 package org.jboss.set.channel.cli;
 
+import org.jboss.set.channel.cli.manifestbuilder.GenerateDependencyGroupsCommand;
 import picocli.CommandLine;
 
 public class Main {
@@ -12,6 +13,7 @@ public class Main {
         commandLine.addSubcommand(new MergeManifestsCommand());
         commandLine.addSubcommand(new ExtractRepositoriesCommand());
         commandLine.addSubcommand(new ExtractManifestUrlCommand());
+        commandLine.addSubcommand(new GenerateDependencyGroupsCommand());
         commandLine.execute(args);
     }
 }
