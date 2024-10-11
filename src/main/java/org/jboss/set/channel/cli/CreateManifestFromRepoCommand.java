@@ -2,6 +2,7 @@ package org.jboss.set.channel.cli;
 
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Reader;
+import org.jboss.logging.Logger;
 import org.wildfly.channel.ChannelManifest;
 import org.wildfly.channel.ChannelManifestMapper;
 import org.wildfly.channel.Stream;
@@ -19,6 +20,8 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "create-manifest-from-repo",
         description = "Scans a local maven repository and creates a manifest file representing the GAVs existing in the repository.")
 public class CreateManifestFromRepoCommand implements Callable<Integer> {
+
+    protected static final Logger logger = Logger.getLogger(CreateManifestFromRepoCommand.class);
 
     private static final String MAVEN_METADATA_XML = "maven-metadata.xml";
 
@@ -47,8 +50,12 @@ public class CreateManifestFromRepoCommand implements Callable<Integer> {
                         // Skip metadata files that list specific artifact files, we are just interested in versions.
                         continue;
                     }
-                    for (String version : metadata.getVersioning().getVersions()) {
-                        streams.add(new Stream(metadata.getGroupId(), metadata.getArtifactId(), version));
+                    if (metadata.getVersioning() != null) {
+                        for (String version : metadata.getVersioning().getVersions()) {
+                            streams.add(new Stream(metadata.getGroupId(), metadata.getArtifactId(), version));
+                        }
+                    } else {
+                        logger.warn("No <versioning> tag in " + MAVEN_METADATA_XML + " file " + metadataFile.toFile().getAbsolutePath());
                     }
                 }
             }
